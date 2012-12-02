@@ -194,13 +194,28 @@ public class BeansFinder {
             helper.processUsagesInNonJavaFiles(beanId, getProcessor(foundedForBean, beanId, beanClass), xmlScope);
 
             appendAll(out, foundedForBean);
-            final Set<BeanDesc> refs = Cf.newSet(extractRefs(Cu.map(Cu.join(foundedForBean.values()), XmlBean.TO_TAG)));
+            final List<XmlTag> foundedTags = Cu.map(Cu.join(foundedForBean.values()), XmlBean.TO_TAG);
+            final Set<BeanDesc> refs = Cf.newSet(Cu.join(extractRefs(foundedTags), extractAliasRefs(foundedTags, bean)));
             System.out.println("refs: " + refs);
             for (final BeanDesc ref : refs) {
                 collectForBean(out, ref);
             }
 
         }
+    }
+
+    //todo: test me, please!
+    private List<BeanDesc> extractAliasRefs(final List<XmlTag> foundedTags, final BeanDesc bean) {
+        final List<BeanDesc> out = Cf.newList();
+        for (final XmlTag foundedTag : foundedTags) {
+            if ("alias".equals(foundedTag.getName())) {
+                final String aliasBeanName = foundedTag.getAttributeValue("name");
+                if(!Su.isEmpty(aliasBeanName)){
+                    out.add(new BeanDesc(bean.getPsiType(), aliasBeanName));
+                }
+            }
+        }
+        return out;
     }
 
     private List<BeanDesc> extractRefs(final List<XmlTag> beans) {
@@ -284,7 +299,8 @@ public class BeansFinder {
     private boolean isBeanXml(final PsiElement elem) {
         if (elem instanceof XmlTag) {
             final XmlTag beanTag = (XmlTag) elem;
-            return "bean".equals(beanTag.getName());
+            final String tagName = beanTag.getName();
+            return "bean".equals(tagName) || "alias".equals(tagName);
         }
         return false;
     }
@@ -299,12 +315,17 @@ public class BeansFinder {
     }
 
     private boolean isOurBean(final XmlTag tag, final String beanId, final @Nullable PsiType beanClassType) {
-        if (beanId.equals(tag.getAttributeValue("id")) || beanId.equals(tag.getAttributeValue("name"))) {
-            final String clazzName = tag.getAttributeValue("class");
-            if (!(clazzName == null)) {
-                final PsiClassType tagBeanType = elementFactory.createTypeByFQClassName(clazzName);
-                return beanClassType == null || beanClassType.isAssignableFrom(tagBeanType);
+        final String tagName = tag.getName();
+        if ("bean".equals(tagName)) {
+            if (beanId.equals(tag.getAttributeValue("id")) || beanId.equals(tag.getAttributeValue("name"))) {
+                final String clazzName = tag.getAttributeValue("class");
+                if (!(clazzName == null)) {
+                    final PsiClassType tagBeanType = elementFactory.createTypeByFQClassName(clazzName);
+                    return beanClassType == null || beanClassType.isAssignableFrom(tagBeanType);
+                }
             }
+        } else if ("alias".equals(tagName)) {
+            return beanId.equals(tag.getAttributeValue("alias"));
         }
         return false;
     }

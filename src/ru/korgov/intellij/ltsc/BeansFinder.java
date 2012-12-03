@@ -235,7 +235,6 @@ public class BeansFinder {
         }
     }
 
-    //todo: test me, please!
     private List<BeanDesc> extractAliasRefs(final List<XmlTag> foundedTags, final BeanDesc bean) {
         final List<BeanDesc> out = Cf.newList();
         for (final XmlTag foundedTag : foundedTags) {

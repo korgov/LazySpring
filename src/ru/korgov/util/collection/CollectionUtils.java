@@ -110,7 +110,7 @@ public class CollectionUtils {
         return out;
     }
 
-    public static <F, T> List<T> map(final Iterable<F> src, final Function<F, T> fu){
+    public static <F, T> List<T> map(final Iterable<F> src, final Function<F, T> fu) {
         final List<T> out = Cf.newList();
         for (final F v : src) {
             out.add(fu.apply(v));
@@ -118,7 +118,16 @@ public class CollectionUtils {
         return out;
     }
 
-    public static <F, T> List<T> map(final F[] src, final Function<F, T> fu){
+
+    public static <T, K, V> Map<K, V> mapFromIterable(final Iterable<T> src, final Function<T, K> k, final Function<T, V> v) {
+        final Map<K, V> out = Cf.newMap();
+        for (final T t : src) {
+            out.put(k.apply(t), v.apply(t));
+        }
+        return out;
+    }
+
+    public static <F, T> List<T> map(final F[] src, final Function<F, T> fu) {
         return map(Cf.list(src), fu);
     }
 

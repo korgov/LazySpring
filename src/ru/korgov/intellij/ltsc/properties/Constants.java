@@ -25,10 +25,13 @@ public class Constants {
             "";
 
     public static final String PROP_EXCLUDE_BEANS = "exclude-beans";
+    public static final String PROP_EXCLUDE_BEANS_STATUS = "exclude-beans-status";
     public static final String PROP_CONFLICTS_POLICITY = "conflicts-policity";
     public static final String PROP_SCOPE_PREFIX = "scope-";
     public static final String PROP_BEANS_HEADER = "beans-header";
     public static final String PROP_BEANS_FOOTER = "beans-footer";
-    public static final String PROP_SCOPE_FALSE = "false";
-    public static final String PROP_SCOPE_TRUE = "true";
+    public static final String PROP_FALSE = "false";
+    public static final String PROP_TRUE = "true";
+    public static final String PROP_CUSTOM_BEANS_MAPPING = "custom-beans-mapping";
+    public static final String PROP_CUSTOM_BEANS_MAPPING_STATUS = "custom-beans-mapping-status";
 }

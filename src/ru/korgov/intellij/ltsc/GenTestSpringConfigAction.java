@@ -37,7 +37,7 @@ public class GenTestSpringConfigAction extends AnAction {
     public void actionPerformed(final AnActionEvent e) {
         final Project project = e.getData(PlatformDataKeys.PROJECT);
         final Editor editor = e.getData(PlatformDataKeys.EDITOR);
-        final PropertiesService propertiesService = PropertiesService.getInstance(PropertiesComponent.getInstance());
+        final PropertiesService propertiesService = PropertiesService.getInstance(PropertiesComponent.getInstance(), project);
         if (project != null && editor != null) {
             final PsiClass clazz = IdeaUtils.getCurrentClass(editor);
             final BeansFinder beansFinder = BeansFinder.getInstance(project, propertiesService);
@@ -82,5 +82,11 @@ public class GenTestSpringConfigAction extends AnAction {
                 }
             }
         }
+    }
+
+    @Override
+    public void update(final AnActionEvent e) {
+        final Editor editor = e.getData(PlatformDataKeys.EDITOR);
+        e.getPresentation().setEnabled(IdeaUtils.getCurrentClass(editor) != null);
     }
 }

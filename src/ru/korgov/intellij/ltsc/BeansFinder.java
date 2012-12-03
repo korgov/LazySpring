@@ -59,6 +59,7 @@ public class BeansFinder {
     private final JavaPsiFacade javaPsiFacede;
     private final PropertiesService propertiesService;
     private final Set<String> excludeBeans = Cf.newSet();
+    private final Map<String, XmlBean> customBeans = Cf.newMap();
 
     private BeansFinder(final Project project, final PropertiesService propertiesService) {
         this.propertiesService = propertiesService;
@@ -67,7 +68,8 @@ public class BeansFinder {
         this.elementFactory = javaPsiFacede.getElementFactory();
         this.prodScope = getSearchScope(project, propertiesService);
         this.xmlScope = GlobalSearchScope.getScopeRestrictedByFileTypes(prodScope, XmlFileType.INSTANCE);
-        this.excludeBeans.addAll(propertiesService.getExcludeBeans());
+        this.excludeBeans.addAll(propertiesService.getCheckedExcludeBeans());
+        this.customBeans.putAll(propertiesService.getCheckedCustomBeansMappingAsBeans());
     }
 
     private GlobalSearchScope getSearchScope(final Project project, final PropertiesService propsService) {
@@ -189,6 +191,10 @@ public class BeansFinder {
         final String beanId = bean.getName();
         if (!out.containsKey(beanId) && !excludeBeans.contains(beanId)) {
             System.out.println("for bean: " + beanId);
+            if (customBeans.containsKey(beanId)) {
+                append(out, beanId, customBeans.get(beanId));
+                return;
+            }
             final PsiType beanClass = bean.getPsiType();
             final Map<String, Set<XmlBean>> foundedForBean = Cf.newMap();
             helper.processUsagesInNonJavaFiles(beanId, getProcessor(foundedForBean, beanId, beanClass), xmlScope);
@@ -210,7 +216,7 @@ public class BeansFinder {
         for (final XmlTag foundedTag : foundedTags) {
             if ("alias".equals(foundedTag.getName())) {
                 final String aliasBeanName = foundedTag.getAttributeValue("name");
-                if(!Su.isEmpty(aliasBeanName)){
+                if (!Su.isEmpty(aliasBeanName)) {
                     out.add(new BeanDesc(bean.getPsiType(), aliasBeanName));
                 }
             }

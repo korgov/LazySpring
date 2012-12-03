@@ -2,6 +2,7 @@ package ru.korgov.intellij.ltsc;
 
 import com.intellij.psi.xml.XmlFile;
 import com.intellij.psi.xml.XmlTag;
+import org.jetbrains.annotations.Nullable;
 import ru.korgov.util.alias.Fu;
 
 /**
@@ -57,8 +58,12 @@ public class XmlBean {
                 '}';
     }
 
-    public static XmlBean from(final XmlTag tag, final XmlFile file){
+    public static XmlBean from(final XmlTag tag, @Nullable final XmlFile file){
         return new XmlBean(tag, tag.getText().trim(), file);
+    }
+
+    public static XmlBean from(final XmlTag tag){
+        return from(tag, null);
     }
 
     public static final Fu<XmlBean, XmlTag> TO_TAG = new Fu<XmlBean, XmlTag>() {

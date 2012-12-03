@@ -13,16 +13,20 @@
     </project-components>
 
     <actions>
-        <group id="ltsc" text="_LTSC" description="Lazy Test Spring-config">
+
+        <group id="ltsc" text="Lazy Test" description="Helper for configuring you test" popup="true">
             <add-to-group group-id="ToolsMenu" anchor="last"/>
-            <action id="ltsc.GenTestSpringConfigAction" class="ru.korgov.intellij.ltsc.GenTestSpringConfigAction"
-                    text="Generate test-spring-config"
-                    description="Generates xml file with all beans needed for current test.">
-                <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl alt L"/>
-            </action>
-            <action id="ShowPropertiesAction" class="ru.korgov.intellij.ltsc.ShowPropertiesAction" text="Properties"
-                    description="Properties of Test-Spring-config generation"/>
-        </group>
+                <action id="ltsc.GenTestSpringConfigAction" class="ru.korgov.intellij.ltsc.GenTestSpringConfigAction"
+                        text="Generate beans!"
+                        description="Generates xml file with all beans needed for current test.">
+                    <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl alt L"/>
+                </action>
+                <action id="ltsc.ShowPropertiesAction" class="ru.korgov.intellij.ltsc.ShowPropertiesAction"
+                        text="Properties"
+                        description="Properties of beans generation">
+                </action>
+            </group>
+
     </actions>
 
     <extensions defaultExtensionNs="com.intellij">

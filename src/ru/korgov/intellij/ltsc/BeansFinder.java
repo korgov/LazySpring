@@ -135,7 +135,7 @@ public class BeansFinder {
     }
 
     private List<BeanDesc> extractSetters(final PsiClass clazz) {
-        final PsiMethod[] methods = clazz.getMethods();
+        final PsiMethod[] methods = clazz.getAllMethods();
         final List<BeanDesc> out = Cf.newList();
         for (final PsiMethod method : methods) {
             final String methodName = method.getName();

@@ -66,7 +66,7 @@ public class IdeaUtils {
     public static List<PsiField> extractAnnotatedFields(final PsiClass clazz, final List<String> annotationNames) {
         final List<PsiField> out = Cf.newList();
         if (clazz != null) {
-            for (final PsiField field : clazz.getFields()) {
+            for (final PsiField field : clazz.getAllFields()) {
                 final PsiAnnotation autowired = AnnotationUtil.findAnnotation(field, annotationNames);
                 if (autowired != null) {
                     out.add(field);

@@ -69,7 +69,7 @@ public class PropertiesService {
     }
 
     public ConflictsPolicity getConflictsPolicity() {
-        final String policityName = propertiesComponent.getValue(Constants.PROP_CONFLICTS_POLICITY, ConflictsPolicity.AUTO_ONE.name());
+        final String policityName = propertiesComponent.getValue(Constants.PROP_CONFLICTS_POLICITY, ConflictsPolicity.AUTO_ALL.name());
         return ConflictsPolicity.valueOf(policityName);
     }
 

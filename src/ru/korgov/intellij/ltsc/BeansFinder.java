@@ -60,17 +60,17 @@ public class BeansFinder {
     private final PsiElementFactory elementFactory;
     private final GlobalSearchScope xmlScope;
     private final JavaPsiFacade javaPsiFacede;
-    private final PropertiesService propertiesService;
-    private final Project project;
+//    private final Project project;
+//    private final PropertiesService propertiesService;
     private final Set<String> excludeBeans = Cf.newSet();
     private final Map<String, XmlBean> customBeans = Cf.newMap();
     private final FileStatusManager fileStatusManager;
     private final boolean onlyVcsFiles;
 
     private BeansFinder(final Project project, final PropertiesService propertiesService) {
-        this.project = project;
+//        this.project = project;
+//        this.propertiesService = propertiesService;
         fileStatusManager = FileStatusManager.getInstance(project);
-        this.propertiesService = propertiesService;
         this.helper = PsiSearchHelper.SERVICE.getInstance(project);
         this.javaPsiFacede = JavaPsiFacade.getInstance(project);
         this.elementFactory = javaPsiFacede.getElementFactory();
@@ -81,17 +81,17 @@ public class BeansFinder {
         this.onlyVcsFiles = propertiesService.getOnlyVcsFilesStatus();
     }
 
-    private GlobalSearchScope getSearchScope(final Project project, final PropertiesService propsService) {
+    private GlobalSearchScope getSearchScope(final Project prj, final PropertiesService propsService) {
         final Set<SearchScopeEnum> searchScopes = propsService.getSearchScope();
-        final ProjectScopeBuilder projectScopeBuilder = ProjectScopeBuilder.getInstance(project);
+        final ProjectScopeBuilder projectScopeBuilder = ProjectScopeBuilder.getInstance(prj);
         GlobalSearchScope scope = projectScopeBuilder.buildAllScope();
 
         if (!searchScopes.contains(SearchScopeEnum.TEST)) {
-            scope = scope.intersectWith(notScope(projectTestScope(project)));
+            scope = scope.intersectWith(notScope(projectTestScope(prj)));
         }
 
         if (!searchScopes.contains(SearchScopeEnum.PRODUCTION)) {
-            scope = scope.intersectWith(notScope(projectProductionScope(project)));
+            scope = scope.intersectWith(notScope(projectProductionScope(prj)));
         }
 
         if (!searchScopes.contains(SearchScopeEnum.LIBRARIES)) {
@@ -116,7 +116,7 @@ public class BeansFinder {
     private Map<String, Set<XmlBean>> findForClass(final PsiClass clazz,
                                                    final Map<String, Set<XmlBean>> alreadyFounded,
                                                    final Set<String> processedClassess) {
-        System.out.println("find for class: " + clazz.getName());
+//        System.out.println("find for class: " + clazz.getName());
         final List<BeanDesc> beansToFind = Cu.join(extractAutowiredFields(clazz), extractSetters(clazz));
         if (!beansToFind.isEmpty()) {
             final Map<String, Set<XmlBean>> beans = findBeans(filterBeansToResolve(alreadyFounded, beansToFind));
@@ -150,7 +150,7 @@ public class BeansFinder {
                 }
             }
         }
-        System.out.println("Setters: " + out);
+//        System.out.println("Setters: " + out);
         return out;
     }
 
@@ -167,9 +167,8 @@ public class BeansFinder {
 
     private List<BeanDesc> extractAutowiredFields(final PsiClass clazz) {
         final List<PsiField> fields = IdeaUtils.extractAnnotatedFields(clazz, Cf.list(AT_AUTOWIRED));
-        final List<BeanDesc> out = Cu.map(fields, FIELD_TO_BEAN_DESC);
-        System.out.println("Autowired: " + out);
-        return out;
+        return Cu.map(fields, FIELD_TO_BEAN_DESC);
+        //        System.out.println("Autowired: " + out);
     }
 
     private List<PsiClass> extractBeanClasses(final Map<String, Set<XmlBean>> beans) {
@@ -193,7 +192,7 @@ public class BeansFinder {
                 final PsiClass[] classes = javaPsiFacede.findClasses(className, prodScope);
                 out.addAll(Cf.list(classes));
             } else {
-                System.out.println("Can't find class by name: " + className);
+//                System.out.println("Can't find class by name: " + className);
             }
         }
         for (final XmlTag subTag : tag.getSubTags()) {
@@ -215,7 +214,7 @@ public class BeansFinder {
     private void collectForBean(final Map<String, Set<XmlBean>> out, final BeanDesc bean) {
         final String beanId = bean.getName();
         if (!out.containsKey(beanId) && !excludeBeans.contains(beanId)) {
-            System.out.println("for bean: " + beanId);
+//            System.out.println("for bean: " + beanId);
             if (customBeans.containsKey(beanId)) {
                 append(out, beanId, customBeans.get(beanId));
                 return;
@@ -227,7 +226,7 @@ public class BeansFinder {
             appendAll(out, foundedForBean);
             final List<XmlTag> foundedTags = Cu.map(Cu.join(foundedForBean.values()), XmlBean.TO_TAG);
             final Set<BeanDesc> refs = Cf.newSet(Cu.join(extractRefs(foundedTags), extractAliasRefs(foundedTags, bean)));
-            System.out.println("refs: " + refs);
+//            System.out.println("refs: " + refs);
             for (final BeanDesc ref : refs) {
                 collectForBean(out, ref);
             }
@@ -288,13 +287,12 @@ public class BeansFinder {
         return new PsiNonJavaFileReferenceProcessor() {
             @Override
             public boolean process(final PsiFile fileWithBean, final int startOffset, final int endOffset) {
-                final String fileName = fileWithBean.getName();
                 if (XmlFileType.INSTANCE.equals(fileWithBean.getFileType())) {
                     final VirtualFile virtualFile = fileWithBean.getVirtualFile();
                     if (virtualFile != null
                             && "xml".equals(virtualFile.getExtension()) && isUnderVcsCheck(virtualFile)) {
 
-                        System.out.println("found word: " + beanId + " in file: " + fileName);
+//                        System.out.println("found word: " + beanId + " in file: " + fileName);
 
                         final XmlFile xmlFile = (XmlFile) fileWithBean;
                         final XmlTag beanTag = getBeanAt(xmlFile, startOffset);
@@ -366,7 +364,7 @@ public class BeansFinder {
                 }
             }
         } else if ("alias".equals(tagName)) {
-            System.out.println("found alias: " + tag.getText());
+//            System.out.println("found alias: " + tag.getText());
             return beanId.equals(tag.getAttributeValue("alias"));
         }
         return false;

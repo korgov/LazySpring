@@ -2,6 +2,9 @@ package ru.korgov.intellij.ltsc;
 
 import com.intellij.ide.highlighter.XmlFileType;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.vcs.FileStatus;
+import com.intellij.openapi.vcs.FileStatusManager;
+import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.JavaPsiFacade;
 import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiClassType;
@@ -58,10 +61,15 @@ public class BeansFinder {
     private final GlobalSearchScope xmlScope;
     private final JavaPsiFacade javaPsiFacede;
     private final PropertiesService propertiesService;
+    private final Project project;
     private final Set<String> excludeBeans = Cf.newSet();
     private final Map<String, XmlBean> customBeans = Cf.newMap();
+    private final FileStatusManager fileStatusManager;
+    private final boolean onlyVcsFiles;
 
     private BeansFinder(final Project project, final PropertiesService propertiesService) {
+        this.project = project;
+        fileStatusManager = FileStatusManager.getInstance(project);
         this.propertiesService = propertiesService;
         this.helper = PsiSearchHelper.SERVICE.getInstance(project);
         this.javaPsiFacede = JavaPsiFacade.getInstance(project);
@@ -70,6 +78,7 @@ public class BeansFinder {
         this.xmlScope = GlobalSearchScope.getScopeRestrictedByFileTypes(prodScope, XmlFileType.INSTANCE);
         this.excludeBeans.addAll(propertiesService.getCheckedExcludeBeans());
         this.customBeans.putAll(propertiesService.getCheckedCustomBeansMappingAsBeans());
+        this.onlyVcsFiles = propertiesService.getOnlyVcsFilesStatus();
     }
 
     private GlobalSearchScope getSearchScope(final Project project, final PropertiesService propsService) {
@@ -166,13 +175,29 @@ public class BeansFinder {
     private List<PsiClass> extractBeanClasses(final Map<String, Set<XmlBean>> beans) {
         final List<PsiClass> out = Cf.newList();
         for (final XmlBean bean : Cu.join(beans.values())) {
-            final String className = bean.getTag().getAttributeValue("class");
+            out.addAll(extractBeanClasses(bean));
+        }
+        return out;
+    }
+
+    private List<PsiClass> extractBeanClasses(final XmlBean bean) {
+        final XmlTag tag = bean.getTag();
+        return extractBeanClasses(tag);
+    }
+
+    private List<PsiClass> extractBeanClasses(final XmlTag tag) {
+        final List<PsiClass> out = Cf.newList();
+        if ("bean".equals(tag.getName())) {
+            final String className = tag.getAttributeValue("class");
             if (className != null) {
                 final PsiClass[] classes = javaPsiFacede.findClasses(className, prodScope);
                 out.addAll(Cf.list(classes));
             } else {
                 System.out.println("Can't find class by name: " + className);
             }
+        }
+        for (final XmlTag subTag : tag.getSubTags()) {
+            out.addAll(extractBeanClasses(subTag));
         }
         return out;
     }
@@ -266,7 +291,10 @@ public class BeansFinder {
             public boolean process(final PsiFile fileWithBean, final int startOffset, final int endOffset) {
                 final String fileName = fileWithBean.getName();
                 if (XmlFileType.INSTANCE.equals(fileWithBean.getFileType())) {
-                    if (fileName.endsWith(".xml")) {
+                    final VirtualFile virtualFile = fileWithBean.getVirtualFile();
+                    if (virtualFile != null
+                            && "xml".equals(virtualFile.getExtension()) && isUnderVcsCheck(virtualFile)) {
+
                         System.out.println("found word: " + beanId + " in file: " + fileName);
 
                         final XmlFile xmlFile = (XmlFile) fileWithBean;
@@ -279,6 +307,14 @@ public class BeansFinder {
                 return true;
             }
         };
+    }
+
+    private boolean isUnderVcsCheck(final VirtualFile virtualFile) {
+        if (onlyVcsFiles) {
+            final FileStatus status = fileStatusManager.getStatus(virtualFile);
+            return !FileStatus.UNKNOWN.equals(status) && !FileStatus.IGNORED.equals(status);
+        }
+        return true;
     }
 
     @Nullable
@@ -331,6 +367,7 @@ public class BeansFinder {
                 }
             }
         } else if ("alias".equals(tagName)) {
+            System.out.println("found alias: " + tag.getText());
             return beanId.equals(tag.getAttributeValue("alias"));
         }
         return false;

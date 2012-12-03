@@ -33,6 +33,7 @@ public class PropertiesWindow {
     private JPanel mainPanel;
     private JEditorPane customBeansMappingPane;
     private JCheckBox customBeansMappingCheckbox;
+    private JCheckBox onlyVCSFilesCheckbox;
 
     public JPanel getMainPanel() {
         return mainPanel;
@@ -87,6 +88,7 @@ public class PropertiesWindow {
         selectConflictPolicity(service);
         customBeansMappingCheckbox.setSelected(service.getCustomBeansMappingStatus());
         excludeBeansCheckbox.setSelected(service.getExcludeBeansStatus());
+        onlyVCSFilesCheckbox.setSelected(service.getOnlyVcsFilesStatus());
         customBeansMappingPane.setText(service.geCustomBeansMappingAsText());
     }
 
@@ -118,9 +120,9 @@ public class PropertiesWindow {
         service.setExcludeBeans(Cf.list(excludeBeansTextArea.getText().split("\\s")));
         service.setSearchScope(getSelectedScopes());
         setConflictsPolicityIfExists(service);
-
         service.setCustomBeansMappingStatus(customBeansMappingCheckbox.isSelected());
         service.setExcludeBeansStatus(excludeBeansCheckbox.isSelected());
+        service.setOnlyVcsFilesStatus(onlyVCSFilesCheckbox.isSelected());
         service.setCustomBeansMappingFromText(customBeansMappingPane.getText());
     }
 

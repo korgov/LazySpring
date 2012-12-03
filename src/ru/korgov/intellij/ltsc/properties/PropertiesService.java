@@ -110,6 +110,10 @@ public class PropertiesService {
         propertiesComponent.setValue(Constants.PROP_CUSTOM_BEANS_MAPPING_STATUS, status ? Constants.PROP_TRUE : Constants.PROP_FALSE);
     }
 
+    public void setOnlyVcsFilesStatus(final boolean status) {
+        propertiesComponent.setValue(Constants.PROP_ONLY_VCF_FILES_STATUS, status ? Constants.PROP_TRUE : Constants.PROP_FALSE);
+    }
+
     public boolean getCustomBeansMappingStatus() {
         final String status = propertiesComponent.getValue(Constants.PROP_CUSTOM_BEANS_MAPPING_STATUS, Constants.PROP_TRUE);
         return Constants.PROP_TRUE.equals(status);
@@ -164,5 +168,10 @@ public class PropertiesService {
             final String someScopeValue = scopesSet.contains(someScope) ? Constants.PROP_TRUE : Constants.PROP_FALSE;
             propertiesComponent.setValue(Constants.PROP_SCOPE_PREFIX + someScope.name(), someScopeValue);
         }
+    }
+
+    public boolean getOnlyVcsFilesStatus() {
+        final String status = propertiesComponent.getValue(Constants.PROP_ONLY_VCF_FILES_STATUS, Constants.PROP_TRUE);
+        return Constants.PROP_TRUE.equals(status);
     }
 }

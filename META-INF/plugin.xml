@@ -1,5 +1,5 @@
 <idea-plugin version="2">
-    <name>ltsc</name>
+    <name>LazySpring</name>
     <description>spring-beans test config file creator</description>
     <version>1.0</version>
     <vendor>Kirill Korgov (kirill@korgov.ru)</vendor>
@@ -14,14 +14,14 @@
 
     <actions>
 
-        <group id="ltsc" text="Lazy Test" description="Helper for configuring you test" popup="true">
+        <group id="LazySpring" text="Lazy Spring" description="Helper for configuring you test" popup="true">
             <add-to-group group-id="ToolsMenu" anchor="last"/>
-                <action id="ltsc.GenTestSpringConfigAction" class="ru.korgov.intellij.ltsc.GenTestSpringConfigAction"
+                <action id="LazySpring.GenTestSpringConfigAction" class="ru.korgov.intellij.ltsc.GenTestSpringConfigAction"
                         text="Generate beans!"
                         description="Generates xml file with all beans needed for current test.">
                     <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl alt L"/>
                 </action>
-                <action id="ltsc.ShowPropertiesAction" class="ru.korgov.intellij.ltsc.ShowPropertiesAction"
+                <action id="LazySpring.ShowPropertiesAction" class="ru.korgov.intellij.ltsc.ShowPropertiesAction"
                         text="Properties"
                         description="Properties of beans generation">
                 </action>

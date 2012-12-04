@@ -49,6 +49,7 @@ public class BeansFinder {
     private static final String AT_AUTOWIRED = "org.springframework.beans.factory.annotation.Autowired";
 
     private static final String SETTER_PREFIX = "set";
+    private static final List<String> REF_ATTRS = Cf.list("ref", "bean", "parent");
 
     private static final Fu<PsiField, BeanDesc> FIELD_TO_BEAN_DESC = new Fu<PsiField, BeanDesc>() {
         @Override
@@ -261,8 +262,9 @@ public class BeansFinder {
     private List<BeanDesc> extractRefs(final XmlTag bean) {
         final List<BeanDesc> out = Cf.newList();
         for (final XmlTag subTag : bean.getSubTags()) {
-            final String subTagName = subTag.getName();
-            addIfNotNull(out, subTag.getAttributeValue("ref".equals(subTagName) ? "bean" : "ref"));
+            for (final String refAttr : REF_ATTRS) {
+                addIfNotNull(out, subTag.getAttributeValue(refAttr));
+            }
             out.addAll(extractRefs(subTag));
         }
         return out;

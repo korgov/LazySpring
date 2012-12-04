@@ -1,7 +1,9 @@
 package ru.korgov.intellij.ltsc.properties;
 
 import com.intellij.ide.util.PropertiesComponent;
+import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.util.Computable;
 import com.intellij.psi.XmlElementFactory;
 import com.intellij.psi.xml.XmlTag;
 import ru.korgov.intellij.ltsc.XmlBean;
@@ -142,12 +144,21 @@ public class PropertiesService {
         final String trimmed = xmlBeans.trim();
         if (!Su.isEmpty(trimmed)) {
             try {
-                final XmlTag rootTag = xmlElementFactory.createTagFromText("<beans>" + trimmed + "</beans>");
+                final XmlTag rootTag = createTagFromText(trimmed);
                 return Cu.mapFromIterable(Cf.list(rootTag.findSubTags("bean")), TAG_TO_ID_OR_NAME, TAG_TO_BEAN);
             } catch (final Exception ignored) {
             }
         }
         return Collections.emptyMap();
+    }
+
+    private XmlTag createTagFromText(final String trimmed) {
+        return ApplicationManager.getApplication().runReadAction(new Computable<XmlTag>() {
+            @Override
+            public XmlTag compute() {
+                return xmlElementFactory.createTagFromText("<beans>" + trimmed + "</beans>");
+            }
+        });
     }
 
     public void setConflictsPolicity(final ConflictsPolicity policity) {

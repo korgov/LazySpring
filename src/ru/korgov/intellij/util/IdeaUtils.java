@@ -67,8 +67,8 @@ public class IdeaUtils {
         final List<PsiField> out = Cf.newList();
         if (clazz != null) {
             for (final PsiField field : clazz.getAllFields()) {
-                final PsiAnnotation autowired = AnnotationUtil.findAnnotation(field, annotationNames);
-                if (autowired != null) {
+                final PsiAnnotation annonation = AnnotationUtil.findAnnotation(field, annotationNames);
+                if (annonation != null) {
                     out.add(field);
                 }
             }

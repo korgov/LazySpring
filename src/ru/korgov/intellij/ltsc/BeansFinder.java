@@ -1,6 +1,7 @@
 package ru.korgov.intellij.ltsc;
 
 import com.intellij.ide.highlighter.XmlFileType;
+import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vcs.FileStatus;
 import com.intellij.openapi.vcs.FileStatusManager;
@@ -60,14 +61,16 @@ public class BeansFinder {
     private final PsiElementFactory elementFactory;
     private final GlobalSearchScope xmlScope;
     private final JavaPsiFacade javaPsiFacede;
-//    private final Project project;
+    //    private final Project project;
 //    private final PropertiesService propertiesService;
     private final Set<String> excludeBeans = Cf.newSet();
     private final Map<String, XmlBean> customBeans = Cf.newMap();
     private final FileStatusManager fileStatusManager;
     private final boolean onlyVcsFiles;
+    private final ProgressIndicator indicator;
 
-    private BeansFinder(final Project project, final PropertiesService propertiesService) {
+    private BeansFinder(final Project project, final PropertiesService propertiesService, final ProgressIndicator indicator) {
+        this.indicator = indicator;
 //        this.project = project;
 //        this.propertiesService = propertiesService;
         fileStatusManager = FileStatusManager.getInstance(project);
@@ -101,8 +104,8 @@ public class BeansFinder {
         return scope;
     }
 
-    public static BeansFinder getInstance(final Project project, final PropertiesService propertiesService) {
-        return new BeansFinder(project, propertiesService);
+    public static BeansFinder getInstance(final Project project, final PropertiesService propertiesService, final ProgressIndicator indicator) {
+        return new BeansFinder(project, propertiesService, indicator);
     }
 
     public Map<String, Set<XmlBean>> findBeans(final List<BeanDesc> beans) {
@@ -221,7 +224,7 @@ public class BeansFinder {
             }
             final PsiType beanClass = bean.getPsiType();
             final Map<String, Set<XmlBean>> foundedForBean = Cf.newMap();
-            helper.processUsagesInNonJavaFiles(beanId, getProcessor(foundedForBean, beanId, beanClass), xmlScope);
+            helper.processUsagesInNonJavaFiles(beanId, getXmlProcessor(foundedForBean, beanId, beanClass), xmlScope);
 
             appendAll(out, foundedForBean);
             final List<XmlTag> foundedTags = Cu.map(Cu.join(foundedForBean.values()), XmlBean.TO_TAG);
@@ -283,7 +286,7 @@ public class BeansFinder {
         }
     }
 
-    private PsiNonJavaFileReferenceProcessor getProcessor(final Map<String, Set<XmlBean>> out, final String beanId, final @Nullable PsiType beanClass) {
+    private PsiNonJavaFileReferenceProcessor getXmlProcessor(final Map<String, Set<XmlBean>> out, final String beanId, final @Nullable PsiType beanClass) {
         return new PsiNonJavaFileReferenceProcessor() {
             @Override
             public boolean process(final PsiFile fileWithBean, final int startOffset, final int endOffset) {
@@ -291,8 +294,8 @@ public class BeansFinder {
                     final VirtualFile virtualFile = fileWithBean.getVirtualFile();
                     if (virtualFile != null
                             && "xml".equals(virtualFile.getExtension()) && isUnderVcsCheck(virtualFile)) {
-
-//                        System.out.println("found word: " + beanId + " in file: " + fileName);
+//                        System.out.println("found word: " + beanId + " in file: " + fileWithBean.getName());
+                        indicator.setText2(beanId + " found in " + virtualFile.getName());
 
                         final XmlFile xmlFile = (XmlFile) fileWithBean;
                         final XmlTag beanTag = getBeanAt(xmlFile, startOffset);

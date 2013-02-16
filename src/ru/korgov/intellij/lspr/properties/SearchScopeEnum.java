@@ -1,4 +1,4 @@
-package ru.korgov.intellij.ltsc.properties;
+package ru.korgov.intellij.lspr.properties;
 
 /**
  * Author: Kirill Korgov (kirill@korgov.ru)

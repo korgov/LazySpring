@@ -1,4 +1,4 @@
-package ru.korgov.intellij.ltsc.properties;
+package ru.korgov.intellij.lspr.properties;
 
 import org.apache.batik.util.gui.xmleditor.XMLEditorKit;
 import org.jetbrains.annotations.Nullable;

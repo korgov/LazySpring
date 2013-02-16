@@ -1,4 +1,4 @@
-package ru.korgov.intellij.ltsc;
+package ru.korgov.intellij.lspr;
 
 import com.intellij.ide.highlighter.XmlFileType;
 import com.intellij.openapi.progress.ProgressIndicator;
@@ -23,8 +23,8 @@ import com.intellij.psi.search.PsiSearchHelper;
 import com.intellij.psi.xml.XmlFile;
 import com.intellij.psi.xml.XmlTag;
 import org.jetbrains.annotations.Nullable;
-import ru.korgov.intellij.ltsc.properties.PropertiesService;
-import ru.korgov.intellij.ltsc.properties.SearchScopeEnum;
+import ru.korgov.intellij.lspr.properties.PropertiesService;
+import ru.korgov.intellij.lspr.properties.SearchScopeEnum;
 import ru.korgov.intellij.util.IdeaUtils;
 import ru.korgov.util.Filter;
 import ru.korgov.util.alias.Cf;

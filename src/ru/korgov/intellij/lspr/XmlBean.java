@@ -1,4 +1,4 @@
-package ru.korgov.intellij.ltsc;
+package ru.korgov.intellij.lspr;
 
 import com.intellij.psi.xml.XmlFile;
 import com.intellij.psi.xml.XmlTag;

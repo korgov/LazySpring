@@ -1,12 +1,12 @@
-package ru.korgov.intellij.ltsc;
+package ru.korgov.intellij.lspr;
 
 import com.intellij.ide.util.PropertiesComponent;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.PlatformDataKeys;
 import com.intellij.openapi.project.Project;
-import ru.korgov.intellij.ltsc.properties.PropertiesService;
-import ru.korgov.intellij.ltsc.properties.PropertiesWindow;
+import ru.korgov.intellij.lspr.properties.PropertiesService;
+import ru.korgov.intellij.lspr.properties.PropertiesWindow;
 
 import javax.swing.*;
 

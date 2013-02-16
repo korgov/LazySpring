@@ -16,12 +16,12 @@
 
         <group id="LazySpring" text="Lazy Spring" description="Helper for configuring you test" popup="true">
             <add-to-group group-id="ToolsMenu" anchor="last"/>
-                <action id="LazySpring.GenTestSpringConfigAction" class="ru.korgov.intellij.ltsc.GenTestSpringConfigAction"
+                <action id="LazySpring.GenTestSpringConfigAction" class="ru.korgov.intellij.lspr.GenTestSpringConfigAction"
                         text="Generate beans!"
                         description="Generates xml file with all beans needed for current test.">
                     <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl alt L"/>
                 </action>
-                <action id="LazySpring.ShowPropertiesAction" class="ru.korgov.intellij.ltsc.ShowPropertiesAction"
+                <action id="LazySpring.ShowPropertiesAction" class="ru.korgov.intellij.lspr.ShowPropertiesAction"
                         text="Properties"
                         description="Properties of beans generation">
                 </action>

@@ -1,4 +1,4 @@
-package ru.korgov.intellij.ltsc.properties;
+package ru.korgov.intellij.lspr.properties;
 
 import com.intellij.ide.util.PropertiesComponent;
 import com.intellij.openapi.application.ApplicationManager;
@@ -6,7 +6,7 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Computable;
 import com.intellij.psi.XmlElementFactory;
 import com.intellij.psi.xml.XmlTag;
-import ru.korgov.intellij.ltsc.XmlBean;
+import ru.korgov.intellij.lspr.XmlBean;
 import ru.korgov.util.alias.Cf;
 import ru.korgov.util.alias.Cu;
 import ru.korgov.util.alias.Fu;

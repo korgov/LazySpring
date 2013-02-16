@@ -23,6 +23,9 @@ import java.util.List;
  */
 public class IdeaUtils {
 
+    private IdeaUtils() {
+    }
+
     @Nullable
     public static PsiClass getCurrentClass(final Editor editor) {
         if (editor != null) {

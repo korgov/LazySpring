@@ -1,4 +1,4 @@
-package ru.korgov.intellij.ltsc;
+package ru.korgov.intellij.lspr;
 
 import com.intellij.ide.util.PropertiesComponent;
 import com.intellij.openapi.actionSystem.AnAction;
@@ -18,8 +18,8 @@ import com.intellij.openapi.vfs.VirtualFileWrapper;
 import com.intellij.psi.PsiClass;
 import com.intellij.psi.xml.XmlTag;
 import org.jetbrains.annotations.NotNull;
-import ru.korgov.intellij.ltsc.properties.ConflictsPolicity;
-import ru.korgov.intellij.ltsc.properties.PropertiesService;
+import ru.korgov.intellij.lspr.properties.ConflictsPolicity;
+import ru.korgov.intellij.lspr.properties.PropertiesService;
 import ru.korgov.intellij.util.IdeaUtils;
 import ru.korgov.util.alias.Cu;
 

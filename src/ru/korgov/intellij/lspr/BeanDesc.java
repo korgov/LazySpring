@@ -1,6 +1,7 @@
 package ru.korgov.intellij.lspr;
 
 import com.intellij.psi.PsiType;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Author: Kirill Korgov (kirill@korgov.ru)
@@ -10,11 +11,12 @@ public class BeanDesc {
     private final PsiType psiType;
     private final String name;
 
-    public BeanDesc(final PsiType psiType, final String name) {
+    public BeanDesc(final @Nullable PsiType psiType, final String name) {
         this.psiType = psiType;
         this.name = name;
     }
 
+    @Nullable
     public PsiType getPsiType() {
         return psiType;
     }

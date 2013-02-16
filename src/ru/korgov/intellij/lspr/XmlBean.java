@@ -58,11 +58,12 @@ public class XmlBean {
                 '}';
     }
 
-    public static XmlBean from(final XmlTag tag, @Nullable final XmlFile file){
+    public static XmlBean from(final XmlTag tag, @Nullable final XmlFile file) {
+        tag.collapseIfEmpty();
         return new XmlBean(tag, tag.getText().trim(), file);
     }
 
-    public static XmlBean from(final XmlTag tag){
+    public static XmlBean from(final XmlTag tag) {
         return from(tag, null);
     }
 

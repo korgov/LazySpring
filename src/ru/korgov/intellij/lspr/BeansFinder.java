@@ -47,6 +47,7 @@ import static com.intellij.psi.search.GlobalSearchScopes.projectTestScope;
  */
 public class BeansFinder {
     private static final String AT_AUTOWIRED = "org.springframework.beans.factory.annotation.Autowired";
+    private static final String AT_REQUIRED = "org.springframework.beans.factory.annotation.Required";
 
     private static final String SETTER_PREFIX = "set";
     private static final List<String> REF_ATTRS = Cf.list("ref", "bean", "parent");
@@ -123,7 +124,8 @@ public class BeansFinder {
 //        System.out.println("find for class: " + clazz.getName());
         final List<BeanDesc> beansToFind = Cu.join(extractAutowiredFields(clazz), extractSetters(clazz));
         if (!beansToFind.isEmpty()) {
-            final Map<String, Set<XmlBean>> beans = findBeans(filterBeansToResolve(alreadyFounded, beansToFind));
+            final List<BeanDesc> filteredBeans = filterBeansToResolve(alreadyFounded, beansToFind);
+            final Map<String, Set<XmlBean>> beans = findBeans(filteredBeans);
             appendAll(alreadyFounded, beans);
             final List<PsiClass> psiClasses = extractBeanClasses(beans);
             for (final PsiClass psiClass : psiClasses) {
@@ -224,8 +226,7 @@ public class BeansFinder {
                 return;
             }
             final PsiType beanClass = bean.getPsiType();
-            final Map<String, Set<XmlBean>> foundedForBean = Cf.newMap();
-            helper.processUsagesInNonJavaFiles(beanId, getXmlProcessor(foundedForBean, beanId, beanClass), xmlScope);
+            final Map<String, Set<XmlBean>> foundedForBean = findForBean(beanId, beanClass);
 
             appendAll(out, foundedForBean);
             final List<XmlTag> foundedTags = Cu.map(Cu.join(foundedForBean.values()), XmlBean.TO_TAG);
@@ -236,6 +237,12 @@ public class BeansFinder {
             }
 
         }
+    }
+
+    private Map<String, Set<XmlBean>> findForBean(final String beanId, final PsiType beanClass) {
+        final Map<String, Set<XmlBean>> foundedForBean = Cf.newMap();
+        helper.processUsagesInNonJavaFiles(beanId, getXmlProcessor(foundedForBean, beanId, beanClass), xmlScope);
+        return foundedForBean;
     }
 
     private List<BeanDesc> extractAliasRefs(final List<XmlTag> foundedTags, final BeanDesc bean) {

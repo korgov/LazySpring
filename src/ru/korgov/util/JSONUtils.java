@@ -1,5 +1,6 @@
 package ru.korgov.util;
 
+import org.jetbrains.annotations.Nullable;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -17,11 +18,14 @@ import java.util.Map;
  * Date: 12/18/11
  */
 public class JSONUtils {
-    public static List<String> asStringList(final JSONArray jsonArray){
-        if(jsonArray != null){
+    private JSONUtils() {
+    }
+
+    public static List<String> asStringList(final JSONArray jsonArray) {
+        if (jsonArray != null) {
             final int length = jsonArray.length();
             final List<String> out = new ArrayList<String>(length);
-            for(int j = 0; j < length; j++){
+            for (int j = 0; j < length; j++) {
                 CollectionUtils.addIfNotNull(out, jsonArray.optString(j));
             }
             return out;
@@ -29,11 +33,11 @@ public class JSONUtils {
         return Collections.emptyList();
     }
 
-    public static List<JSONObject> asJSONObjectList(final JSONArray jsonArray){
-        if(jsonArray != null){
+    public static List<JSONObject> asJSONObjectList(final JSONArray jsonArray) {
+        if (jsonArray != null) {
             final int length = jsonArray.length();
             final List<JSONObject> out = new ArrayList<JSONObject>(length);
-            for(int j = 0; j < length; j++){
+            for (int j = 0; j < length; j++) {
                 CollectionUtils.addIfNotNull(out, jsonArray.optJSONObject(j));
             }
             return out;
@@ -41,43 +45,43 @@ public class JSONUtils {
         return Collections.emptyList();
     }
 
-    public static List<JSONArray> asJSONArrayList(final JSONArray jsonArray){
-        if(jsonArray != null){
+    public static List<JSONArray> asJSONArrayList(final JSONArray jsonArray) {
+        if (jsonArray != null) {
             final int length = jsonArray.length();
             final List<JSONArray> out = new ArrayList<JSONArray>(length);
-            for(int j = 0; j < length; j++){
+            for (int j = 0; j < length; j++) {
                 CollectionUtils.addIfNotNull(out, jsonArray.optJSONArray(j));
             }
             return out;
         }
         return Collections.emptyList();
     }
-    
-    public static Map<String, String> asMap(final JSONObject jsonObject){
-        if(jsonObject == null){
+
+    public static Map<String, String> asMap(final JSONObject jsonObject) {
+        if (jsonObject == null) {
             return Collections.emptyMap();
         }
 
         final List<String> keys = getKeys(jsonObject);
         final Map<String, String> out = new HashMap<String, String>(keys.size());
-        for(final String key : keys){
+        for (final String key : keys) {
             final String value = jsonObject.optString(key, null);
             CollectionUtils.addIfNotNull(out, key, value);
         }
         return out;
     }
 
-    public static Map<Class<?>, List<String>> getTypedKeys(final JSONObject jsonObject){
-        if(jsonObject == null){
+    public static Map<Class<?>, List<String>> getTypedKeys(final JSONObject jsonObject) {
+        if (jsonObject == null) {
             return Collections.emptyMap();
         }
         final Map<Class<?>, List<String>> out = new HashMap<Class<?>, List<String>>();
-        for(final String key : getKeys(jsonObject)){
+        for (final String key : getKeys(jsonObject)) {
             final Object value = getSafetyObject(jsonObject, key);
-            if(value !=null){
-                if(value instanceof JSONObject){
+            if (value != null) {
+                if (value instanceof JSONObject) {
                     CollectionUtils.appendToMultiMap(out, JSONObject.class, key);
-                } else if(value instanceof JSONArray){
+                } else if (value instanceof JSONArray) {
                     CollectionUtils.appendToMultiMap(out, JSONArray.class, key);
                 } else {
                     CollectionUtils.appendToMultiMap(out, String.class, key);
@@ -87,6 +91,7 @@ public class JSONUtils {
         return out;
     }
 
+    @Nullable
     private static Object getSafetyObject(final JSONObject jsonObject, final String key) {
         try {
             return jsonObject.get(key);
@@ -95,10 +100,10 @@ public class JSONUtils {
         }
     }
 
-    public static List<String> getKeys(final JSONObject jsonObject){
+    public static List<String> getKeys(final JSONObject jsonObject) {
         final List<String> out = new ArrayList<String>();
-        final Iterator it = jsonObject.keys();
-        while(it.hasNext()){
+        final Iterator<?> it = jsonObject.keys();
+        while (it.hasNext()) {
             out.add(it.next().toString());
         }
         return out;

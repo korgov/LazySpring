@@ -12,6 +12,9 @@ import java.net.URLConnection;
  */
 public class UrlUtils {
 
+    private UrlUtils() {
+    }
+
     public static String sendPostRequest(final String url, final String query) throws IOException {
         final URLConnection urlConnection = createPostConnection(url);
         write(urlConnection, query);

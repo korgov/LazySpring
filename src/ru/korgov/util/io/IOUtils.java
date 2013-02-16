@@ -7,6 +7,9 @@ import java.io.*;
  * Date: 29.12.11
  */
 public class IOUtils {
+    private IOUtils() {
+    }
+
     public static String readFile(final String filename) throws IOException {
         return read(new FileInputStream(filename));
     }

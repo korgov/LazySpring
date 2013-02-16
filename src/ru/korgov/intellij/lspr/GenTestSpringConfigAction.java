@@ -53,10 +53,10 @@ public class GenTestSpringConfigAction extends AnAction {
                     indicator.setFraction(0.2);
                     final BeansFinder beansFinder = getBeansFinder(indicator, project, propertiesService);
                     indicator.setFraction(0.4);
-                    final Map<String, Set<XmlBean>> out = findForClass(clazz, beansFinder);
+                    final Map<String, Set<XmlBean>> requiredBeans = findForClass(clazz, beansFinder);
                     indicator.setFraction(0.8);
                     indicator.setText("Saving config file..");
-                    createConfig(project, clazz, out, propertiesService);
+                    createConfig(project, clazz, requiredBeans, propertiesService);
                     indicator.setFraction(1.0);
                 }
             }.setCancelText("Cancel task.").queue();

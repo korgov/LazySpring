@@ -3,9 +3,9 @@ package ru.korgov.util.collection;
 import org.jetbrains.annotations.Nullable;
 import ru.korgov.util.Filter;
 import ru.korgov.util.alias.Cf;
+import ru.korgov.util.alias.Fus;
 import ru.korgov.util.func.Function;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 
 /**
@@ -30,6 +31,14 @@ public class CollectionUtils {
             out.put(keys.get(i), values.get(i));
         }
         return out;
+    }
+
+    public static <K, V> Map<K, V> zipMap(final Iterable<Pair<? extends K, ? extends V>> entries) {
+        return mapFromIterable(Fus.<K, V>firstOfPair(), Fus.<K, V>secondOfPair(), entries);
+    }
+
+    public static <K, V> Map<K, V> zipMap(final Pair<? extends K, ? extends V>... entries) {
+        return zipMap(list(entries));
     }
 
     public static <T> List<T> list(final T... items) {
@@ -63,10 +72,31 @@ public class CollectionUtils {
     public static <K, V> void appendToMultiMap(final Map<K, List<V>> mm, final K key, final V value) {
         List<V> values = mm.get(key);
         if (values == null) {
-            values = new ArrayList<V>();
+            values = Cf.newList();
             mm.put(key, values);
         }
         values.add(value);
+    }
+
+    public static <K, V> void appendToMultiSet(final Map<K, Set<V>> m, final K k, final V v) {
+        Set<V> values = m.get(k);
+        if (values == null) {
+            values = Cf.newSet();
+            m.put(k, values);
+        }
+        values.add(v);
+    }
+
+    public static <K, V> void appendAllToMultiSet(final Map<K, Set<V>> out, final K key, final Iterable<V> values) {
+        for (final V v : values) {
+            appendToMultiSet(out, key, v);
+        }
+    }
+
+    public static <K, V> void appendAllToMultiSet(final Map<K, Set<V>> out, final Map<K, ? extends Iterable<V>> kvss) {
+        for (final Map.Entry<K, ? extends Iterable<V>> kvs : kvss.entrySet()) {
+            appendAllToMultiSet(out, kvs.getKey(), kvs.getValue());
+        }
     }
 
     @Nullable
@@ -119,7 +149,7 @@ public class CollectionUtils {
     }
 
 
-    public static <T, K, V> Map<K, V> mapFromIterable(final Iterable<T> src, final Function<T, K> k, final Function<T, V> v) {
+    public static <T, K, V> Map<K, V> mapFromIterable(final Function<T, K> k, final Function<T, V> v, final Iterable<T> src) {
         final Map<K, V> out = Cf.newMap();
         for (final T t : src) {
             out.put(k.apply(t), v.apply(t));
@@ -129,6 +159,49 @@ public class CollectionUtils {
 
     public static <F, T> List<T> map(final F[] src, final Function<F, T> fu) {
         return map(Cf.list(src), fu);
+    }
+
+    public static <T> Iterator<T> oneTimeIterator(final T value) {
+        return new Iterator<T>() {
+            private boolean hasNext = true;
+
+            @Override
+            public boolean hasNext() {
+                return hasNext;
+            }
+
+            @Override
+            public T next() {
+                if (hasNext) {
+                    hasNext = false;
+                    return value;
+                }
+                throw new NoSuchElementException();
+            }
+
+            @Override
+            public void remove() {
+                hasNext = false;
+            }
+        };
+    }
+
+    public static <T> Iterator<T> emptyIterator() {
+        return new Iterator<T>() {
+            @Override
+            public boolean hasNext() {
+                return false;
+            }
+
+            @Override
+            public T next() {
+                throw new NoSuchElementException();
+            }
+
+            @Override
+            public void remove() {
+            }
+        };
     }
 
 }

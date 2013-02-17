@@ -9,12 +9,13 @@ import ru.korgov.util.alias.Fu;
  * Author: Kirill Korgov (kirill@korgov.ru)
  * Date: 02.12.12
  */
+@Deprecated
 public class XmlBean {
     private final XmlTag tag;
     private final String text;
     private final XmlFile file;
 
-    public XmlBean(final XmlTag tag, final String text, final XmlFile file) {
+    private XmlBean(final XmlTag tag, final String text, final XmlFile file) {
         this.tag = tag;
         this.text = text;
         this.file = file;

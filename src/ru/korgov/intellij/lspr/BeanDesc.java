@@ -7,6 +7,7 @@ import org.jetbrains.annotations.Nullable;
  * Author: Kirill Korgov (kirill@korgov.ru)
  * Date: 01.12.12
  */
+@Deprecated
 public class BeanDesc {
     private final PsiType psiType;
     private final String name;

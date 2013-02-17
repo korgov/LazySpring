@@ -18,6 +18,7 @@ import com.intellij.openapi.vfs.VirtualFileWrapper;
 import com.intellij.psi.PsiClass;
 import com.intellij.psi.xml.XmlTag;
 import org.jetbrains.annotations.NotNull;
+import ru.korgov.intellij.lspr.model.DependencyTag;
 import ru.korgov.intellij.lspr.properties.ConflictsPolicity;
 import ru.korgov.intellij.lspr.properties.PropertiesService;
 import ru.korgov.intellij.util.IdeaUtils;
@@ -53,7 +54,7 @@ public class GenTestSpringConfigAction extends AnAction {
                     indicator.setFraction(0.2);
                     final BeansFinder beansFinder = getBeansFinder(indicator, project, propertiesService);
                     indicator.setFraction(0.4);
-                    final Map<String, Set<XmlBean>> requiredBeans = findForClass(clazz, beansFinder);
+                    final Map<String, Set<DependencyTag>> requiredBeans = findForClass(clazz, beansFinder);
                     indicator.setFraction(0.8);
                     indicator.setText("Saving config file..");
                     createConfig(project, clazz, requiredBeans, propertiesService);
@@ -63,10 +64,10 @@ public class GenTestSpringConfigAction extends AnAction {
         }
     }
 
-    private Map<String, Set<XmlBean>> findForClass(final PsiClass clazz, final BeansFinder beansFinder) {
-        return ApplicationManager.getApplication().runReadAction(new Computable<Map<String, Set<XmlBean>>>() {
+    private Map<String, Set<DependencyTag>> findForClass(final PsiClass clazz, final BeansFinder beansFinder) {
+        return ApplicationManager.getApplication().runReadAction(new Computable<Map<String, Set<DependencyTag>>>() {
             @Override
-            public Map<String, Set<XmlBean>> compute() {
+            public Map<String, Set<DependencyTag>> compute() {
                 return beansFinder.findForClass(clazz);
             }
         });
@@ -90,7 +91,7 @@ public class GenTestSpringConfigAction extends AnAction {
         });
     }
 
-    private void createConfig(final Project project, final PsiClass clazz, final Map<String, Set<XmlBean>> beanNameToTag, final PropertiesService propertiesService) {
+    private void createConfig(final Project project, final PsiClass clazz, final Map<String, Set<DependencyTag>> beanNameToTag, final PropertiesService propertiesService) {
         final ConflictsPolicity conflictsPolicity = propertiesService.getConflictsPolicity();
         final String beansHeader = propertiesService.getBeansHeader();
         final String beansFooter = propertiesService.getBeansFooter();
@@ -133,15 +134,14 @@ public class GenTestSpringConfigAction extends AnAction {
     }
 
 
-    private void writeBeans(final Map<String, Set<XmlBean>> beanNameToTag, final Writer writer, final ConflictsPolicity conflictsPolicity) throws IOException {
-        final boolean writeAll = ConflictsPolicity.AUTO_ALL.equals(conflictsPolicity);
-        for (final Set<XmlBean> xmlTags : beanNameToTag.values()) {
-            if (writeAll) {
-                for (final XmlTag xmlTag : Cu.map(xmlTags, XmlBean.TO_TAG)) {
+    private void writeBeans(final Map<String, Set<DependencyTag>> beanNameToTag, final Writer writer, final ConflictsPolicity conflictsPolicity) throws IOException {
+        for (final Set<DependencyTag> xmlTags : beanNameToTag.values()) {
+            if (conflictsPolicity == ConflictsPolicity.AUTO_ALL) {
+                for (final XmlTag xmlTag : Cu.map(xmlTags, DependencyTag.TO_TAG)) {
                     writer.write(TAB + xmlTag.getText() + "\n\n");
                 }
             } else {
-                final XmlBean xmlTag = Cu.firstOrNull(xmlTags);
+                final DependencyTag xmlTag = Cu.firstOrNull(xmlTags);
                 if (xmlTag != null) {
                     writer.write(TAB + xmlTag.getText() + "\n\n");
                 }

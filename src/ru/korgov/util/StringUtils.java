@@ -16,6 +16,10 @@ public class StringUtils {
         return nvl(str, "");
     }
 
+    public static String avoidEmpty(final String value, final String defValue){
+        return isEmpty(value) ? defValue : value;
+    }
+
     @Nullable
     public static String nullIfEmpty(final String str) {
         return str == null ? null : str.isEmpty() ? null : str;

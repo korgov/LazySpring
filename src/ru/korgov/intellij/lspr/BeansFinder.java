@@ -8,9 +8,7 @@ import com.intellij.openapi.vcs.FileStatusManager;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.JavaPsiFacade;
 import com.intellij.psi.PsiClass;
-import com.intellij.psi.PsiClassType;
 import com.intellij.psi.PsiElement;
-import com.intellij.psi.PsiElementFactory;
 import com.intellij.psi.PsiField;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiMethod;
@@ -23,6 +21,9 @@ import com.intellij.psi.search.PsiSearchHelper;
 import com.intellij.psi.xml.XmlFile;
 import com.intellij.psi.xml.XmlTag;
 import org.jetbrains.annotations.Nullable;
+import ru.korgov.intellij.lspr.model.Dependency;
+import ru.korgov.intellij.lspr.model.DependencyTag;
+import ru.korgov.intellij.lspr.model.DependencyTagDescriptor;
 import ru.korgov.intellij.lspr.properties.PropertiesService;
 import ru.korgov.intellij.lspr.properties.SearchScopeEnum;
 import ru.korgov.intellij.util.IdeaUtils;
@@ -31,6 +32,7 @@ import ru.korgov.util.alias.Cf;
 import ru.korgov.util.alias.Cu;
 import ru.korgov.util.alias.Fu;
 import ru.korgov.util.alias.Su;
+import ru.korgov.util.collection.Option;
 
 import java.util.Collections;
 import java.util.List;
@@ -52,21 +54,21 @@ public class BeansFinder {
     private static final String SETTER_PREFIX = "set";
     private static final List<String> REF_ATTRS = Cf.list("ref", "bean", "parent");
 
-    private static final Fu<PsiField, BeanDesc> FIELD_TO_BEAN_DESC = new Fu<PsiField, BeanDesc>() {
+    private static final Fu<PsiField, Dependency> FIELD_TO_BEAN_DESC = new Fu<PsiField, Dependency>() {
         @Override
-        public BeanDesc apply(final PsiField v) {
-            return new BeanDesc(v.getType(), v.getName());
+        public Dependency apply(final PsiField v) {
+            return Dependency.byNameAndType(v.getName(), v.getType());
         }
     };
     private final GlobalSearchScope prodScope;
     private final PsiSearchHelper helper;
-    private final PsiElementFactory elementFactory;
+    private final DependencyTagDescriptor dependencyTagDescriptor;
     private final GlobalSearchScope xmlScope;
     private final JavaPsiFacade javaPsiFacede;
     //    private final Project project;
 //    private final PropertiesService propertiesService;
     private final Set<String> excludeBeans = Cf.newSet();
-    private final Map<String, XmlBean> customBeans = Cf.newMap();
+    private final Map<String, DependencyTag> customBeans = Cf.newMap();
     private final FileStatusManager fileStatusManager;
     private final boolean onlyVcsFiles;
     private final ProgressIndicator indicator;
@@ -78,12 +80,12 @@ public class BeansFinder {
         fileStatusManager = FileStatusManager.getInstance(project);
         this.helper = PsiSearchHelper.SERVICE.getInstance(project);
         this.javaPsiFacede = JavaPsiFacade.getInstance(project);
-        this.elementFactory = javaPsiFacede.getElementFactory();
         this.prodScope = getSearchScope(project, propertiesService);
         this.xmlScope = GlobalSearchScope.getScopeRestrictedByFileTypes(prodScope, XmlFileType.INSTANCE);
         this.excludeBeans.addAll(propertiesService.getCheckedExcludeBeans());
-        this.customBeans.putAll(propertiesService.getCheckedCustomBeansMappingAsBeans());
         this.onlyVcsFiles = propertiesService.getOnlyVcsFilesStatus();
+        this.dependencyTagDescriptor = new DependencyTagDescriptor(prodScope, javaPsiFacede);
+        this.customBeans.putAll(propertiesService.getCheckedCustomBeansMappingAsBeans(dependencyTagDescriptor));
     }
 
     private GlobalSearchScope getSearchScope(final Project prj, final PropertiesService propsService) {
@@ -110,39 +112,42 @@ public class BeansFinder {
         return new BeansFinder(project, propertiesService, indicator);
     }
 
-    public Map<String, Set<XmlBean>> findBeans(final List<BeanDesc> beans) {
-        final Map<String, Set<XmlBean>> out = Cf.newMap();
-        for (final BeanDesc bean : beans) {
-            collectForBean(out, bean);
+    public Map<String, Set<DependencyTag>> resolveDependencies(final List<Dependency> dependencies) {
+        final Map<String, Set<DependencyTag>> out = Cf.newMap();
+        for (final Dependency dependency : dependencies) {
+            collectForDependency(out, dependency);
         }
         return out;
     }
 
-    private Map<String, Set<XmlBean>> findForClass(final PsiClass clazz,
-                                                   final Map<String, Set<XmlBean>> alreadyFounded,
-                                                   final Set<String> processedClassess) {
+    private Map<String, Set<DependencyTag>> findForClass(final PsiClass clazz,
+                                                         final Map<String, Set<DependencyTag>> alreadyResolved,
+                                                         final Set<String> processedClassess) {
 //        System.out.println("find for class: " + clazz.getName());
-        final List<BeanDesc> beansToFind = Cu.join(extractAutowiredFields(clazz), extractSetters(clazz));
-        if (!beansToFind.isEmpty()) {
-            final List<BeanDesc> filteredBeans = filterBeansToResolve(alreadyFounded, beansToFind);
-            final Map<String, Set<XmlBean>> beans = findBeans(filteredBeans);
-            appendAll(alreadyFounded, beans);
-            final List<PsiClass> psiClasses = extractBeanClasses(beans);
-            for (final PsiClass psiClass : psiClasses) {
+        final List<Dependency> classDependencies = extractClassDependencies(clazz);
+        if (!classDependencies.isEmpty()) {
+            final List<Dependency> filteredDependencies = filterUnresolvedDependencies(alreadyResolved, classDependencies);
+            final Map<String, Set<DependencyTag>> depTags = resolveDependencies(filteredDependencies);
+            Cu.appendAllToMultiSet(alreadyResolved, depTags);
+            for (final PsiClass psiClass : extractClasses(depTags)) {
                 final String qualifiedName = psiClass.getQualifiedName();
                 if (!processedClassess.contains(qualifiedName)) {
-                    appendAll(alreadyFounded, findForClass(psiClass, alreadyFounded, processedClassess));
+                    Cu.appendAllToMultiSet(alreadyResolved, findForClass(psiClass, alreadyResolved, processedClassess));
                     processedClassess.add(qualifiedName);
                 }
             }
-            return alreadyFounded;
+            return alreadyResolved;
         }
         return Collections.emptyMap();
     }
 
-    private List<BeanDesc> extractSetters(final PsiClass clazz) {
+    private List<Dependency> extractClassDependencies(final PsiClass clazz) {
+        return Cu.join(extractFromAutowiredFields(clazz), extractFromSetters(clazz));
+    }
+
+    private List<Dependency> extractFromSetters(final PsiClass clazz) {
         final PsiMethod[] methods = clazz.getAllMethods();
-        final List<BeanDesc> out = Cf.newList();
+        final List<Dependency> out = Cf.newList();
         for (final PsiMethod method : methods) {
             final String methodName = method.getName();
             if (methodName.startsWith("set")) {
@@ -151,7 +156,7 @@ public class BeansFinder {
                     final PsiType type = parameters[0].getType();
                     final String beanName = beanNameFromSetter(methodName);
                     if (beanName != null) {
-                        out.add(new BeanDesc(type, beanName));
+                        out.add(Dependency.byNameAndType(beanName, type));
                     }
                 }
             }
@@ -171,131 +176,60 @@ public class BeansFinder {
         return null;
     }
 
-    private List<BeanDesc> extractAutowiredFields(final PsiClass clazz) {
+    private List<Dependency> extractFromAutowiredFields(final PsiClass clazz) {
         final List<PsiField> fields = IdeaUtils.extractAnnotatedFields(clazz, Cf.list(AT_AUTOWIRED));
         return Cu.map(fields, FIELD_TO_BEAN_DESC);
         //        System.out.println("Autowired: " + out);
     }
 
-    private List<PsiClass> extractBeanClasses(final Map<String, Set<XmlBean>> beans) {
-        final List<PsiClass> out = Cf.newList();
-        for (final XmlBean bean : Cu.join(beans.values())) {
-            out.addAll(extractBeanClasses(bean));
-        }
-        return out;
+    private Set<PsiClass> extractClasses(final Map<String, Set<DependencyTag>> depTags) {
+        return Cf.newSet(DependencyTag.flatMapToClasses(Cu.join(depTags.values())));
     }
 
-    private List<PsiClass> extractBeanClasses(final XmlBean bean) {
-        final XmlTag tag = bean.getTag();
-        return extractBeanClasses(tag);
-    }
-
-    private List<PsiClass> extractBeanClasses(final XmlTag tag) {
-        final List<PsiClass> out = Cf.newList();
-        if ("bean".equals(tag.getName())) {
-            final String className = tag.getAttributeValue("class");
-            if (className != null) {
-                final PsiClass[] classes = javaPsiFacede.findClasses(className, prodScope);
-                out.addAll(Cf.list(classes));
-            } else {
-//                System.out.println("Can't find class by name: " + className);
-            }
-        }
-        for (final XmlTag subTag : tag.getSubTags()) {
-            out.addAll(extractBeanClasses(subTag));
-        }
-        return out;
-    }
-
-    private List<BeanDesc> filterBeansToResolve(final Map<String, Set<XmlBean>> alreadyFounded, final List<BeanDesc> beansToFind) {
-        return Cu.filter(beansToFind, new Filter<BeanDesc>() {
+    private List<Dependency> filterUnresolvedDependencies(final Map<String, Set<DependencyTag>> alreadyFounded, final List<Dependency> beansToFind) {
+        return Cu.filter(beansToFind, new Filter<Dependency>() {
             @Override
-            public boolean fits(final BeanDesc bean) {
+            public boolean fits(final Dependency bean) {
                 final String beanName = bean.getName();
                 return !alreadyFounded.containsKey(beanName);
             }
         });
     }
 
-    private void collectForBean(final Map<String, Set<XmlBean>> out, final BeanDesc bean) {
-        final String beanId = bean.getName();
+    private void collectForDependency(final Map<String, Set<DependencyTag>> out, final Dependency dependency) {
+        final String beanId = dependency.getName();
         if (!out.containsKey(beanId) && !excludeBeans.contains(beanId)) {
 //            System.out.println("for bean: " + beanId);
-            if (customBeans.containsKey(beanId)) {
-                append(out, beanId, customBeans.get(beanId));
-                return;
-            }
-            final PsiType beanClass = bean.getPsiType();
-            final Map<String, Set<XmlBean>> foundedForBean = findForBean(beanId, beanClass);
 
-            appendAll(out, foundedForBean);
-            final List<XmlTag> foundedTags = Cu.map(Cu.join(foundedForBean.values()), XmlBean.TO_TAG);
-            final Set<BeanDesc> refs = Cf.newSet(Cu.join(extractRefs(foundedTags), extractAliasRefs(foundedTags, bean)));
+            final Map<String, Set<DependencyTag>> foundedForBean = resolveDependencyWithCustom(dependency);
+            Cu.appendAllToMultiSet(out, foundedForBean);
+
+            final Set<Dependency> refs = extractRefs(Cu.join(foundedForBean.values()));
 //            System.out.println("refs: " + refs);
-            for (final BeanDesc ref : refs) {
-                collectForBean(out, ref);
+            for (final Dependency ref : refs) {
+                collectForDependency(out, ref);
             }
-
         }
     }
 
-    private Map<String, Set<XmlBean>> findForBean(final String beanId, final PsiType beanClass) {
-        final Map<String, Set<XmlBean>> foundedForBean = Cf.newMap();
-        helper.processUsagesInNonJavaFiles(beanId, getXmlProcessor(foundedForBean, beanId, beanClass), xmlScope);
-        return foundedForBean;
+    private Map<String, Set<DependencyTag>> resolveDependencyWithCustom(final Dependency dependency) {
+        final String dependencyName = dependency.getName();
+        return customBeans.containsKey(dependencyName)
+                ? Collections.singletonMap(dependencyName, Cf.set(customBeans.get(dependencyName)))
+                : resolveDependency(dependency);
     }
 
-    private List<BeanDesc> extractAliasRefs(final List<XmlTag> foundedTags, final BeanDesc bean) {
-        final List<BeanDesc> out = Cf.newList();
-        for (final XmlTag foundedTag : foundedTags) {
-            if ("alias".equals(foundedTag.getName())) {
-                final String aliasBeanName = foundedTag.getAttributeValue("name");
-                if (!Su.isEmpty(aliasBeanName)) {
-                    out.add(new BeanDesc(bean.getPsiType(), aliasBeanName));
-                }
-            }
-        }
+    private Map<String, Set<DependencyTag>> resolveDependency(final Dependency dependency) {
+        final Map<String, Set<DependencyTag>> out = Cf.newMap();
+        helper.processUsagesInNonJavaFiles(dependency.getName(), getXmlProcessor(out, dependency), xmlScope);
         return out;
     }
 
-    private List<BeanDesc> extractRefs(final List<XmlTag> beans) {
-        final List<BeanDesc> out = Cf.newList();
-        for (final XmlTag bean : beans) {
-            out.addAll(extractRefs(bean));
-        }
-        return out;
+    private Set<Dependency> extractRefs(final Iterable<DependencyTag> dependencyTags) {
+        return Cf.newSet(DependencyTag.flatMapToRefs(dependencyTags));
     }
 
-    private List<BeanDesc> extractRefs(final XmlTag bean) {
-        final List<BeanDesc> out = Cf.newList();
-        for (final XmlTag subTag : bean.getSubTags()) {
-            for (final String refAttr : REF_ATTRS) {
-                addIfNotNull(out, subTag.getAttributeValue(refAttr));
-            }
-            out.addAll(extractRefs(subTag));
-        }
-        return out;
-    }
-
-    private void addIfNotNull(final List<BeanDesc> out, final String refBean) {
-        if (refBean != null) {
-            out.add(new BeanDesc(null, refBean));
-        }
-    }
-
-    private void appendAll(final Map<String, Set<XmlBean>> out, final Map<String, Set<XmlBean>> foundedForBean) {
-        for (final Map.Entry<String, Set<XmlBean>> kvs : foundedForBean.entrySet()) {
-            appendAll(out, kvs.getKey(), kvs.getValue());
-        }
-    }
-
-    private void appendAll(final Map<String, Set<XmlBean>> out, final String key, final Set<XmlBean> values) {
-        for (final XmlBean v : values) {
-            append(out, key, v);
-        }
-    }
-
-    private PsiNonJavaFileReferenceProcessor getXmlProcessor(final Map<String, Set<XmlBean>> out, final String beanId, final @Nullable PsiType beanClass) {
+    private PsiNonJavaFileReferenceProcessor getXmlProcessor(final Map<String, Set<DependencyTag>> out, final Dependency dependency) {
         return new PsiNonJavaFileReferenceProcessor() {
             @Override
             public boolean process(final PsiFile fileWithBean, final int startOffset, final int endOffset) {
@@ -304,12 +238,14 @@ public class BeansFinder {
                     if (virtualFile != null
                             && "xml".equals(virtualFile.getExtension()) && isUnderVcsCheck(virtualFile)) {
 //                        System.out.println("found word: " + beanId + " in file: " + fileWithBean.getName());
-                        indicator.setText2(beanId + " found in " + virtualFile.getName());
+                        final String beanName = dependency.getName();
+                        indicator.setText2(beanName + " found in " + virtualFile.getName());
 
                         final XmlFile xmlFile = (XmlFile) fileWithBean;
-                        final XmlTag beanTag = getBeanAt(xmlFile, startOffset);
-                        if (beanTag != null && isOurBean(beanTag, beanId, beanClass)) {
-                            append(out, beanId, XmlBean.from(beanTag, xmlFile));
+                        final XmlTag beanTag = getXmlTagAt(xmlFile, startOffset);
+                        final Option<DependencyTag> dependencyTag = dependencyTagDescriptor.buildFromTag(beanTag, dependency);
+                        if (dependencyTag.hasValue()) {
+                            Cu.appendToMultiSet(out, beanName, dependencyTag.getValue());
                         }
                     }
                 }
@@ -327,17 +263,17 @@ public class BeansFinder {
     }
 
     @Nullable
-    private XmlTag getBeanAt(final XmlFile xmlFile, final int startOffset) {
-        PsiElement maybeBean = xmlFile.findElementAt(startOffset);
-        if (maybeBean != null) {
+    private XmlTag getXmlTagAt(final XmlFile xmlFile, final int startOffset) {
+        PsiElement element = xmlFile.findElementAt(startOffset);
+        if (element != null) {
             final XmlTag rootTag = xmlFile.getRootTag();
             while (true) {
-                if (isBeanXml(maybeBean)) {
-                    return (XmlTag) maybeBean;
+                if (isDependencyTag(element)) {
+                    return (XmlTag) element;
                 } else {
-                    final PsiElement parent = maybeBean.getParent();
+                    final PsiElement parent = element.getParent();
                     if (parent != null && !parent.equals(rootTag)) {
-                        maybeBean = parent;
+                        element = parent;
                     } else {
                         return null;
                     }
@@ -347,42 +283,11 @@ public class BeansFinder {
         return null;
     }
 
-    private boolean isBeanXml(final PsiElement elem) {
-        if (elem instanceof XmlTag) {
-            final XmlTag beanTag = (XmlTag) elem;
-            final String tagName = beanTag.getName();
-            return "bean".equals(tagName) || "alias".equals(tagName);
-        }
-        return false;
+    private boolean isDependencyTag(final PsiElement elem) {
+        return elem instanceof XmlTag && dependencyTagDescriptor.isDependencyTag((XmlTag) elem);
     }
 
-    private void append(final Map<String, Set<XmlBean>> m, final String k, final XmlBean v) {
-        Set<XmlBean> values = m.get(k);
-        if (values == null) {
-            values = Cf.newSet();
-            m.put(k, values);
-        }
-        values.add(v);
-    }
-
-    private boolean isOurBean(final XmlTag tag, final String beanId, final @Nullable PsiType beanClassType) {
-        final String tagName = tag.getName();
-        if ("bean".equals(tagName)) {
-            if (beanId.equals(tag.getAttributeValue("id")) || beanId.equals(tag.getAttributeValue("name"))) {
-                final String clazzName = tag.getAttributeValue("class");
-                if (!(clazzName == null)) {
-                    final PsiClassType tagBeanType = elementFactory.createTypeByFQClassName(clazzName);
-                    return beanClassType == null || beanClassType.isAssignableFrom(tagBeanType);
-                }
-            }
-        } else if ("alias".equals(tagName)) {
-//            System.out.println("found alias: " + tag.getText());
-            return beanId.equals(tag.getAttributeValue("alias"));
-        }
-        return false;
-    }
-
-    public Map<String, Set<XmlBean>> findForClass(final PsiClass clazz) {
-        return findForClass(clazz, Cf.<String, Set<XmlBean>>newMap(), Cf.<String>newSet());
+    public Map<String, Set<DependencyTag>> findForClass(final PsiClass clazz) {
+        return findForClass(clazz, Cf.<String, Set<DependencyTag>>newMap(), Cf.<String>newSet());
     }
 }

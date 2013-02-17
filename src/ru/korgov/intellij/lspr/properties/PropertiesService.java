@@ -6,11 +6,13 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Computable;
 import com.intellij.psi.XmlElementFactory;
 import com.intellij.psi.xml.XmlTag;
-import ru.korgov.intellij.lspr.XmlBean;
+import ru.korgov.intellij.lspr.model.DependencyTag;
+import ru.korgov.intellij.lspr.model.DependencyTagDescriptor;
 import ru.korgov.util.alias.Cf;
 import ru.korgov.util.alias.Cu;
 import ru.korgov.util.alias.Fu;
 import ru.korgov.util.alias.Su;
+import ru.korgov.util.func.Function;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -40,14 +42,9 @@ public class PropertiesService {
             return tag.getAttributeValue("name");
         }
     };
-    private static final Fu<XmlTag, XmlBean> TAG_TO_BEAN = new Fu<XmlTag, XmlBean>() {
-        @Override
-        public XmlBean apply(final XmlTag tag) {
-            return XmlBean.from(tag);
-        }
-    };
     private final PropertiesComponent propertiesComponent;
     private final XmlElementFactory xmlElementFactory;
+
 
     private PropertiesService(final PropertiesComponent propertiesComponent, final Project project) {
         this.propertiesComponent = propertiesComponent;
@@ -129,27 +126,36 @@ public class PropertiesService {
         return propertiesComponent.getValue(Constants.PROP_CUSTOM_BEANS_MAPPING, "");
     }
 
-    public Map<String, XmlBean> getCustomBeansMappingAsBeans() {
-        return convertMappingToBeans(geCustomBeansMappingAsText());
+    public Map<String, DependencyTag> getCustomBeansMappingAsBeans(final DependencyTagDescriptor dependencyTagDescriptor) {
+        return convertMappingToBeans(geCustomBeansMappingAsText(), dependencyTagDescriptor);
     }
 
-    public Map<String, XmlBean> getCheckedCustomBeansMappingAsBeans() {
+    public Map<String, DependencyTag> getCheckedCustomBeansMappingAsBeans(final DependencyTagDescriptor dependencyTagDescriptor) {
         if (getCustomBeansMappingStatus()) {
-            return getCustomBeansMappingAsBeans();
+            return getCustomBeansMappingAsBeans(dependencyTagDescriptor);
         }
         return Collections.emptyMap();
     }
 
-    private Map<String, XmlBean> convertMappingToBeans(final String xmlBeans) {
+    private Map<String, DependencyTag> convertMappingToBeans(final String xmlBeans, final DependencyTagDescriptor dependencyTagDescriptor) {
         final String trimmed = xmlBeans.trim();
         if (!Su.isEmpty(trimmed)) {
             try {
                 final XmlTag rootTag = createTagFromText(trimmed);
-                return Cu.mapFromIterable(Cf.list(rootTag.findSubTags("bean")), TAG_TO_ID_OR_NAME, TAG_TO_BEAN);
+                return Cu.mapFromIterable(TAG_TO_ID_OR_NAME, toDependencyTagFu(dependencyTagDescriptor), Cf.list(rootTag.findSubTags("bean")));
             } catch (final Exception ignored) {
             }
         }
         return Collections.emptyMap();
+    }
+
+    private Function<XmlTag, DependencyTag> toDependencyTagFu(final DependencyTagDescriptor dependencyTagDescriptor) {
+        return new Fu<XmlTag, DependencyTag>() {
+            @Override
+            public DependencyTag apply(final XmlTag tag) {
+                return dependencyTagDescriptor.newBeanTag(tag);
+            }
+        };
     }
 
     private XmlTag createTagFromText(final String trimmed) {

@@ -135,18 +135,19 @@ public class GenTestSpringConfigAction extends AnAction {
 
 
     private void writeBeans(final Map<String, Set<DependencyTag>> beanNameToTag, final Writer writer, final ConflictsPolicity conflictsPolicity) throws IOException {
-        for (final Set<DependencyTag> xmlTags : beanNameToTag.values()) {
-            if (conflictsPolicity == ConflictsPolicity.AUTO_ALL) {
-                for (final XmlTag xmlTag : Cu.map(xmlTags, DependencyTag.TO_TAG)) {
-                    writer.write(TAB + xmlTag.getText() + "\n\n");
-                }
-            } else {
-                final DependencyTag xmlTag = Cu.firstOrNull(xmlTags);
-                if (xmlTag != null) {
-                    writer.write(TAB + xmlTag.getText() + "\n\n");
-                }
+        for (final Set<DependencyTag> tags : beanNameToTag.values()) {
+            for (final DependencyTag dependencyTag : getTagsToWrite(conflictsPolicity, tags)) {
+                writeTag(writer, dependencyTag.getTag());
             }
         }
+    }
+
+    private Iterable<DependencyTag> getTagsToWrite(final ConflictsPolicity conflictsPolicity, final Set<DependencyTag> tags) {
+        return conflictsPolicity == ConflictsPolicity.AUTO_ALL ? tags : Cu.firstOrNothing(tags);
+    }
+
+    private void writeTag(final Writer writer, final XmlTag xmlTag) throws IOException {
+        writer.write(TAB + xmlTag.getText() + "\n\n");
     }
 
     @Override

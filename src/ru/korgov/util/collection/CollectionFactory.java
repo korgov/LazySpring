@@ -38,6 +38,12 @@ public class CollectionFactory {
         return out;
     }
 
+    public static <T> Set<T> linkedSet(final T... items) {
+        final Set<T> out = Cf.newLinkedSet();
+        Collections.addAll(out, items);
+        return out;
+    }
+
     public static <F, S> Pair<F, S> pair(final F first, final S second) {
         return Pair.of(first, second);
     }
@@ -57,6 +63,10 @@ public class CollectionFactory {
 
     public static <T> Set<T> newLinkedSet() {
         return new LinkedHashSet<T>();
+    }
+
+    public static <T> Set<T> newLinkedSet(final Collection<T> c) {
+        return new LinkedHashSet<T>(c);
     }
 
     public static <T> Set<T> newSet(final Collection<T> c) {

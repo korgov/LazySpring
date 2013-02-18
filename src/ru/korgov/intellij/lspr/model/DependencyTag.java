@@ -1,10 +1,12 @@
 package ru.korgov.intellij.lspr.model;
 
 import com.intellij.psi.PsiClass;
+import com.intellij.psi.xml.XmlFile;
 import com.intellij.psi.xml.XmlTag;
 import ru.korgov.util.alias.Cf;
 import ru.korgov.util.alias.Cu;
 import ru.korgov.util.alias.Fu;
+import ru.korgov.util.collection.Option;
 
 import java.util.List;
 import java.util.Set;
@@ -19,19 +21,20 @@ public abstract class DependencyTag {
 
     private final XmlTag tag;
     private final String text;
+    private final Option<XmlFile> xmlFile;
 
-    private DependencyTag(final XmlTag tag, final String text) {
+    private DependencyTag(final XmlTag tag, final String text, final Option<XmlFile> xmlFile) {
         this.tag = tag;
         this.text = text;
+        this.xmlFile = xmlFile;
     }
 
     protected DependencyTag(final XmlTag tag) {
-        this(tag, collapsedTagText(tag));
+        this(tag, Option.<XmlFile>nothing());
     }
 
-    private static String collapsedTagText(final XmlTag tag) {
-        tag.collapseIfEmpty();
-        return tag.getText().trim();
+    protected DependencyTag(final XmlTag tag, final Option<XmlFile> xmlFile) {
+        this(tag, tag.getText().trim(), xmlFile);
     }
 
     public XmlTag getTag() {
@@ -40,6 +43,10 @@ public abstract class DependencyTag {
 
     public String getText() {
         return text;
+    }
+
+    public Option<XmlFile> getXmlFile() {
+        return xmlFile;
     }
 
     public Set<PsiClass> extractClasses() {

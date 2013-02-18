@@ -35,4 +35,8 @@ public class Constants {
     public static final String PROP_CUSTOM_BEANS_MAPPING = "custom-beans-mapping";
     public static final String PROP_CUSTOM_BEANS_MAPPING_STATUS = "custom-beans-mapping-status";
     public static final String PROP_ONLY_VCF_FILES_STATUS = "only-vcs-files-status";
+    public static final String PROP_PRIORITY_PATHS = "priority-paths";
+
+    private Constants() {
+    }
 }

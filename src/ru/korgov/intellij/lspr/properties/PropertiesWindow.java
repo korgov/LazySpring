@@ -34,6 +34,7 @@ public class PropertiesWindow {
     private JEditorPane customBeansMappingPane;
     private JCheckBox customBeansMappingCheckbox;
     private JCheckBox onlyVCSFilesCheckbox;
+    private JTextArea priorityFilePathsTextArea;
 
     public JPanel getMainPanel() {
         return mainPanel;
@@ -85,6 +86,7 @@ public class PropertiesWindow {
         beansFooterPane.setText(service.getBeansFooter());
         selectScopes(service);
         excludeBeansTextArea.setText(Su.join(service.getExcludeBeans(), "\n"));
+        priorityFilePathsTextArea.setText(Su.join(service.getPriorityPaths(), "\n"));
         selectConflictPolicity(service);
         customBeansMappingCheckbox.setSelected(service.getCustomBeansMappingStatus());
         excludeBeansCheckbox.setSelected(service.getExcludeBeansStatus());
@@ -118,6 +120,7 @@ public class PropertiesWindow {
         service.setHeader(beansHeaderPane.getText());
         service.setFooter(beansFooterPane.getText());
         service.setExcludeBeans(Cf.list(excludeBeansTextArea.getText().split("\\s")));
+        service.setPriorityPaths(Cf.list(priorityFilePathsTextArea.getText().split("\\s")));
         service.setSearchScope(getSelectedScopes());
         setConflictsPolicityIfExists(service);
         service.setCustomBeansMappingStatus(customBeansMappingCheckbox.isSelected());

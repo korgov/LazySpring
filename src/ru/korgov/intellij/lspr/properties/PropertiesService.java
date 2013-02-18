@@ -55,6 +55,11 @@ public class PropertiesService {
         return new PropertiesService(propertiesComponent, project);
     }
 
+    public Set<String> getPriorityPaths() {
+        final String priorityPathsLines = propertiesComponent.getValue(Constants.PROP_PRIORITY_PATHS, "");
+        return Cf.linkedSet(priorityPathsLines.split("\\n"));
+    }
+
     public List<String> getExcludeBeans() {
         final String excludeBeansLines = propertiesComponent.getValue(Constants.PROP_EXCLUDE_BEANS, Constants.DEFAULT_EXCLUDE_BEANS);
         return Cf.list(excludeBeansLines.split("\\n"));
@@ -190,5 +195,9 @@ public class PropertiesService {
     public boolean getOnlyVcsFilesStatus() {
         final String status = propertiesComponent.getValue(Constants.PROP_ONLY_VCF_FILES_STATUS, Constants.PROP_TRUE);
         return Constants.PROP_TRUE.equals(status);
+    }
+
+    public void setPriorityPaths(final Collection<String> priorityPaths) {
+        propertiesComponent.setValue(Constants.PROP_PRIORITY_PATHS, Su.join(Cu.map(priorityPaths, TRIM), "\n"));
     }
 }

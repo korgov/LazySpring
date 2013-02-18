@@ -6,6 +6,7 @@ import com.intellij.psi.PsiClassType;
 import com.intellij.psi.PsiElementFactory;
 import com.intellij.psi.PsiType;
 import com.intellij.psi.search.GlobalSearchScope;
+import com.intellij.psi.xml.XmlFile;
 import com.intellij.psi.xml.XmlTag;
 import ru.korgov.util.alias.Cf;
 import ru.korgov.util.alias.Cu;
@@ -31,14 +32,10 @@ public class DependencyTagDescriptor {
     private final Map<String, DependencyTagBuilder> builders = Cu.zipMap(
             Cf.pair("bean", new DependencyTagBuilder() {
                 @Override
-                public Option<DependencyTag> buildFromTag(final XmlTag tag, final Dependency dependency) {
+                public Option<DependencyTag> buildFromTag(final XmlTag tag, final Dependency dependency, final XmlFile xmlFile) {
                     if (validBeanId(tag, dependency)) {
-                        final String clazzName = tag.getAttributeValue("class");
-                        if (clazzName != null) {
-                            final PsiClassType tagBeanType = elementFactory.createTypeByFQClassName(clazzName);
-                            if (validDependencyClass(tagBeanType, dependency)) {
-                                return Option.just(newBeanTag(tag));
-                            }
+                        if (validBeanTag(tag, dependency)) {
+                            return Option.just(newBeanTag(tag, Option.just(xmlFile)));
                         }
                     }
                     return Option.nothing();
@@ -47,9 +44,9 @@ public class DependencyTagDescriptor {
             Cf.pair("alias", new DependencyTagBuilder() {
 
                 @Override
-                public Option<DependencyTag> buildFromTag(final XmlTag tag, final Dependency dependency) {
+                public Option<DependencyTag> buildFromTag(final XmlTag tag, final Dependency dependency, final XmlFile xmlFile) {
                     if (validAliasId(tag, dependency)) {
-                        return Option.just(newAliasTag(tag, dependency));
+                        return Option.just(newAliasTag(tag, dependency, Option.just(xmlFile)));
                     }
                     return Option.nothing();
                 }
@@ -62,15 +59,23 @@ public class DependencyTagDescriptor {
             Cf.pair("map", utilTagBuilder("map-class", "java.util.Map"))
     );
 
+    private boolean validBeanTag(final XmlTag tag, final Dependency dependency) {
+        final String clazzName = tag.getAttributeValue("class");
+        if (clazzName != null) {
+            return validDependencyClass(elementFactory.createTypeByFQClassName(clazzName), dependency);
+        }
+        return !Su.isEmpty(tag.getAttributeValue("parent"));
+    }
+
     private DependencyTagBuilder utilTagBuilder(final String classAttr, final String defaultClass) {
         return new DependencyTagBuilder() {
             @Override
-            public Option<DependencyTag> buildFromTag(final XmlTag tag, final Dependency dependency) {
+            public Option<DependencyTag> buildFromTag(final XmlTag tag, final Dependency dependency, final XmlFile xmlFile) {
                 if (validBeanId(tag, dependency)) {
                     final String clazzName = Su.avoidEmpty(tag.getAttributeValue(classAttr), defaultClass);
                     final PsiClassType tagBeanType = elementFactory.createTypeByFQClassName(clazzName);
                     if (validDependencyClass(tagBeanType, dependency)) {
-                        return Option.just(newBeanTag(tag));
+                        return Option.just(newBeanTag(tag, Option.just(xmlFile)));
                     }
                 }
                 return Option.nothing();
@@ -88,17 +93,17 @@ public class DependencyTagDescriptor {
         return builders.containsKey(xmlTag.getName());
     }
 
-    public Option<DependencyTag> buildFromTag(final XmlTag tag, final Dependency dependency) {
+    public Option<DependencyTag> buildFromTag(final XmlTag tag, final Dependency dependency, final XmlFile xmlFile) {
         if (tag != null) {
             final DependencyTagBuilder dependencyTagBuilder = builders.get(tag.getName());
             if (dependencyTagBuilder != null) {
-                return dependencyTagBuilder.buildFromTag(tag, dependency);
+                return dependencyTagBuilder.buildFromTag(tag, dependency, xmlFile);
             }
         }
         return Option.nothing();
     }
 
-    private static boolean validDependencyClass(final PsiClassType tagBeanType, final Dependency dependency) {
+    private boolean validDependencyClass(final PsiClassType tagBeanType, final Dependency dependency) {
         final Option<PsiType> psiType = dependency.getPsiType();
         return !psiType.hasValue() || psiType.getValue().isAssignableFrom(tagBeanType);
     }
@@ -122,24 +127,31 @@ public class DependencyTagDescriptor {
     }
 
     private interface DependencyTagBuilder {
-        Option<DependencyTag> buildFromTag(final XmlTag tag, final Dependency dependency);
+        Option<DependencyTag> buildFromTag(final XmlTag tag, final Dependency dependency, final XmlFile xmlFile);
     }
 
     public DependencyTag newBeanTag(final XmlTag tag) {
-        return new DependencyTag(tag) {
+        return newBeanTag(tag, Option.<XmlFile>nothing());
+    }
+
+    public DependencyTag newBeanTag(final XmlTag tag, final Option<XmlFile> xmlFile) {
+        return new DependencyTag(tag, xmlFile) {
             @Override
             protected Set<PsiClass> extractClassesFromTag(final XmlTag someTag) {
-                final String className = tag.getAttributeValue("class");
+                final String className = someTag.getAttributeValue("class");
                 if (className != null) {
-                    return Cf.set(javaPsiFacade.findClasses(className, prodScope));
+                    System.out.println("trying extract class: " + className);
+                    final Set<PsiClass> result = Cf.set(javaPsiFacade.findClasses(className, prodScope));
+                    System.out.println("extracted for: " + className + " :: " + result);
+                    return result;
                 }
                 return Cf.emptyS();
             }
         };
     }
 
-    public DependencyTag newAliasTag(final XmlTag tag, final Dependency dependency) {
-        return new DependencyTag(tag) {
+    public DependencyTag newAliasTag(final XmlTag tag, final Dependency dependency, final Option<XmlFile> xmlFile) {
+        return new DependencyTag(tag, xmlFile) {
             @SuppressWarnings("RefusedBequest")
             @Override
             public Set<PsiClass> extractClasses() {

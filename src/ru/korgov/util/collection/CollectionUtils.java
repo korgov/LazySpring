@@ -1,5 +1,6 @@
 package ru.korgov.util.collection;
 
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import ru.korgov.util.Filter;
 import ru.korgov.util.alias.Cf;
@@ -103,6 +104,12 @@ public class CollectionUtils {
     public static <T> T firstOrNull(final Collection<T> c) {
         final Iterator<T> iterator = c.iterator();
         return iterator.hasNext() ? iterator.next() : null;
+    }
+
+    @NotNull
+    public static <T> Option<T> firstOrNothing(final Collection<T> c) {
+        final Iterator<T> iterator = c.iterator();
+        return iterator.hasNext() ? Option.just(iterator.next()) : Option.<T>nothing();
     }
 
     public static <T> List<T> filter(final Iterable<? extends T> src, final Filter<? super T> filter) {

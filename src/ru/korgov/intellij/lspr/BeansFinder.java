@@ -222,6 +222,7 @@ public class BeansFinder {
             //System.out.println("for bean: " + beanId);
 
             final Set<DependencyTag> foundedForBean = resolveDependencyWithCustom(dependency);
+            indicator.setText(dependency.getName() + " resolved into " + foundedForBean.size() + " beans");
             Cu.appendAllToMultiSet(out, dependency.getName(), foundedForBean);
 
             final Set<Dependency> refs = extractRefs(foundedForBean);

@@ -29,11 +29,9 @@ import ru.korgov.util.ObjectUtils;
 import ru.korgov.util.alias.Cu;
 import ru.korgov.util.collection.Option;
 
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.Writer;
+import java.nio.charset.Charset;
 import java.util.Map;
 import java.util.Set;
 
@@ -120,16 +118,24 @@ public class GenTestSpringConfigAction extends AnAction {
                     @Override
                     public void run() {
                         try {
-                            final Writer writer = new BufferedWriter(new FileWriter(save.getFile()));
-                            try {
-                                writer.write(beansHeader + "\n\n");
-                                writeBeans(beanNameToTag, writer, conflictsPolicity);
-                                writer.write("\n\n" + beansFooter);
-                            } finally {
-                                writer.close();
-                            }
+                            writeVirtFile();
                         } catch (final IOException ignored) {
                         }
+                    }
+
+                    private void writeVirtFile() throws IOException {
+                        final VirtualFile virtualFile = save.getVirtualFile(true);
+                        if (virtualFile != null) {
+                            virtualFile.setBinaryContent(buildFileBody().getBytes(Charset.forName("UTF-8")));
+                        }
+                    }
+
+                    private String buildFileBody() {
+                        final StringBuilder sb = new StringBuilder(256);
+                        sb.append(beansHeader).append("\n\n");
+                        appendBeans(beanNameToTag, sb, conflictsPolicity);
+                        sb.append("\n\n").append(beansFooter);
+                        return sb.toString();
                     }
                 });
             }
@@ -175,10 +181,10 @@ public class GenTestSpringConfigAction extends AnAction {
     }
 
 
-    private void writeBeans(final Map<String, Set<DependencyTag>> beanNameToTag, final Writer writer, final ConflictsPolicity conflictsPolicity) throws IOException {
+    private void appendBeans(final Map<String, Set<DependencyTag>> beanNameToTag, final StringBuilder sb, final ConflictsPolicity conflictsPolicity) {
         for (final Set<DependencyTag> tags : beanNameToTag.values()) {
             for (final DependencyTag dependencyTag : getTagsToWrite(conflictsPolicity, tags)) {
-                writeTag(writer, dependencyTag.getTag());
+                appendTag(sb, dependencyTag.getTag());
             }
         }
     }
@@ -187,8 +193,8 @@ public class GenTestSpringConfigAction extends AnAction {
         return conflictsPolicity == ConflictsPolicity.AUTO_ALL ? tags : Cu.firstOrNothing(tags);
     }
 
-    private void writeTag(final Writer writer, final XmlTag xmlTag) throws IOException {
-        writer.write(TAB + xmlTag.getText() + "\n\n");
+    private void appendTag(final StringBuilder sb, final XmlTag xmlTag) {
+        sb.append(TAB).append(xmlTag.getText()).append("\n\n");
     }
 
     @Override

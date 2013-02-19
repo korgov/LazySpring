@@ -29,10 +29,6 @@ public abstract class DependencyTag {
         this.xmlFile = xmlFile;
     }
 
-    protected DependencyTag(final XmlTag tag) {
-        this(tag, Option.<XmlFile>nothing());
-    }
-
     protected DependencyTag(final XmlTag tag, final Option<XmlFile> xmlFile) {
         this(tag, tag.getText().trim(), xmlFile);
     }

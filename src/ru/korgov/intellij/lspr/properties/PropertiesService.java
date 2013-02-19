@@ -200,4 +200,13 @@ public class PropertiesService {
     public void setPriorityPaths(final Collection<String> priorityPaths) {
         propertiesComponent.setValue(Constants.PROP_PRIORITY_PATHS, Su.join(Cu.map(priorityPaths, TRIM), "\n"));
     }
+
+    public String getSavePathSuffix() {
+        return propertiesComponent.getValue(Constants.PROP_SAVE_PATH_SUFFIX, Constants.DEFAULT_SAVE_PATH_SUFFIX);
+    }
+
+    public void setSavePathSuffix(final String suffix) {
+        propertiesComponent.setValue(Constants.PROP_SAVE_PATH_SUFFIX, suffix);
+    }
+
 }

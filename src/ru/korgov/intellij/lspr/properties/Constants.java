@@ -24,6 +24,9 @@ public class Constants {
             "transactionTemplate\n" +
             "";
 
+    public static final String DEFAULT_SAVE_PATH_SUFFIX = "src/test";
+
+
     public static final String PROP_EXCLUDE_BEANS = "exclude-beans";
     public static final String PROP_EXCLUDE_BEANS_STATUS = "exclude-beans-status";
     public static final String PROP_CONFLICTS_POLICITY = "conflicts-policity";
@@ -36,6 +39,7 @@ public class Constants {
     public static final String PROP_CUSTOM_BEANS_MAPPING_STATUS = "custom-beans-mapping-status";
     public static final String PROP_ONLY_VCF_FILES_STATUS = "only-vcs-files-status";
     public static final String PROP_PRIORITY_PATHS = "priority-paths";
+    public static final String PROP_SAVE_PATH_SUFFIX = "save-path-suffix";
 
     private Constants() {
     }

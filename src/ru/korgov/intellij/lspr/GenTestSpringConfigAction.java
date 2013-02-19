@@ -10,21 +10,27 @@ import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.fileChooser.FileChooserFactory;
 import com.intellij.openapi.fileChooser.FileSaverDescriptor;
 import com.intellij.openapi.fileChooser.FileSaverDialog;
+import com.intellij.openapi.module.Module;
 import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.progress.Task;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Computable;
+import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.vfs.VirtualFileWrapper;
 import com.intellij.psi.PsiClass;
 import com.intellij.psi.xml.XmlTag;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import ru.korgov.intellij.lspr.model.DependencyTag;
 import ru.korgov.intellij.lspr.properties.ConflictsPolicity;
 import ru.korgov.intellij.lspr.properties.PropertiesService;
 import ru.korgov.intellij.util.IdeaUtils;
+import ru.korgov.util.ObjectUtils;
 import ru.korgov.util.alias.Cu;
+import ru.korgov.util.collection.Option;
 
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
@@ -51,6 +57,7 @@ public class GenTestSpringConfigAction extends AnAction {
                     indicator.setText("Searching beans..");
                     indicator.setFraction(0.0);
                     final PsiClass clazz = getCurrentClass(editor);
+
                     indicator.setFraction(0.2);
                     final BeansFinder beansFinder = getBeansFinder(indicator, project, propertiesService);
                     indicator.setFraction(0.4);
@@ -95,11 +102,14 @@ public class GenTestSpringConfigAction extends AnAction {
         final ConflictsPolicity conflictsPolicity = propertiesService.getConflictsPolicity();
         final String beansHeader = propertiesService.getBeansHeader();
         final String beansFooter = propertiesService.getBeansFooter();
+        final String savePathSuffix = propertiesService.getSavePathSuffix();
         final Application application = ApplicationManager.getApplication();
+
+        //todo: ask add to VCS after save
         application.invokeLater(new Runnable() {
             @Override
             public void run() {
-                final VirtualFileWrapper save = saveDialog(project, clazz);
+                final VirtualFileWrapper save = saveDialog(project, clazz, savePathSuffix);
                 if (save != null) {
                     doWrite(save);
                 }
@@ -127,10 +137,41 @@ public class GenTestSpringConfigAction extends AnAction {
 
     }
 
-    private VirtualFileWrapper saveDialog(final Project project, final PsiClass clazz) {
+    private VirtualFileWrapper saveDialog(final Project project, final PsiClass clazz, final String savePathSuffix) {
         final FileSaverDialog dialog = FileChooserFactory.getInstance().createSaveFileDialog(
                 new FileSaverDescriptor("Save config to", "", "xml"), project);
-        return dialog.save(project.getBaseDir(), "test-" + clazz.getName() + ".xml");
+        final VirtualFile moduleDir = getClassModuleDir(project, clazz);
+        final VirtualFile path = ObjectUtils.avoidNull(addPathSuffix(moduleDir, savePathSuffix), moduleDir);
+        return dialog.save(path, "test-" + clazz.getName() + ".xml");
+    }
+
+    @Nullable
+    private VirtualFile addPathSuffix(final VirtualFile moduleDir, final String suffix) {
+        final File ioFile = new File(addPathSuffix(moduleDir.getPath(), suffix, File.separator));
+        return new VirtualFileWrapper(ioFile).getVirtualFile();
+    }
+
+    private String addPathSuffix(final String path, final String suffix, final String sep) {
+        return stripEndSep(path, sep) + sep + stripStartSep(suffix, sep);
+    }
+
+    private String stripEndSep(final String path, final String sep) {
+        return path.endsWith(sep) ? path.substring(0, path.length() - sep.length()) : path;
+    }
+
+    private String stripStartSep(final String path, final String sep) {
+        return path.startsWith(sep) ? path.substring(sep.length()) : path;
+    }
+
+    private VirtualFile getClassModuleDir(final Project project, final PsiClass clazz) {
+        final Option<Module> classModule = IdeaUtils.getClassModule(project, clazz);
+        if (classModule.hasValue()) {
+            final VirtualFile moduleFile = classModule.getValue().getModuleFile();
+            if (moduleFile != null) {
+                return moduleFile.getParent();
+            }
+        }
+        return project.getBaseDir();
     }
 
 

@@ -1,5 +1,7 @@
 package ru.korgov.intellij.lspr;
 
+import com.intellij.find.FindModel;
+import com.intellij.find.impl.FindInProjectUtil;
 import com.intellij.ide.highlighter.XmlFileType;
 import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.project.Project;
@@ -14,13 +16,16 @@ import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiMethod;
 import com.intellij.psi.PsiParameter;
 import com.intellij.psi.PsiType;
+import com.intellij.psi.impl.search.LowLevelSearchUtil;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.psi.search.ProjectAndLibrariesScope;
 import com.intellij.psi.search.ProjectScopeBuilder;
 import com.intellij.psi.search.PsiNonJavaFileReferenceProcessor;
-import com.intellij.psi.search.PsiSearchHelper;
 import com.intellij.psi.xml.XmlFile;
 import com.intellij.psi.xml.XmlTag;
+import com.intellij.usageView.UsageInfo;
+import com.intellij.util.Processor;
+import com.intellij.util.text.StringSearcher;
 import org.jetbrains.annotations.Nullable;
 import ru.korgov.intellij.lspr.model.Dependency;
 import ru.korgov.intellij.lspr.model.DependencyTag;
@@ -48,12 +53,17 @@ import static com.intellij.psi.search.GlobalSearchScopes.projectTestScope;
  * Author: Kirill Korgov (kirill@korgov.ru)
  * Date: 01.12.12
  */
+
 public class BeansFinder {
+//    todo: use logger
+//    private static final Logger log = Logger.getLogger(BeansFinder.class);
+
+//    todo: check @Required annotation in setters
+//    private static final String AT_REQUIRED = "org.springframework.beans.factory.annotation.Required";
+
     private static final String AT_AUTOWIRED = "org.springframework.beans.factory.annotation.Autowired";
-    private static final String AT_REQUIRED = "org.springframework.beans.factory.annotation.Required";
 
     private static final String SETTER_PREFIX = "set";
-    private static final List<String> REF_ATTRS = Cf.list("ref", "bean", "parent");
 
     private static final Fu<PsiField, Dependency> FIELD_TO_BEAN_DESC = new Fu<PsiField, Dependency>() {
         @Override
@@ -62,12 +72,12 @@ public class BeansFinder {
         }
     };
     private final GlobalSearchScope prodScope;
-    private final PsiSearchHelper helper;
+    //    private final PsiSearchHelper helper;
     private final DependencyTagDescriptor dependencyTagDescriptor;
     private final GlobalSearchScope xmlScope;
     private final JavaPsiFacade javaPsiFacede;
-    //    private final Project project;
-//    private final PropertiesService propertiesService;
+    private final Project project;
+    //    private final PropertiesService propertiesService;
     private final Set<String> excludeBeans = Cf.newSet();
     private final Map<String, DependencyTag> customBeans = Cf.newMap();
     private final FileStatusManager fileStatusManager;
@@ -77,10 +87,10 @@ public class BeansFinder {
 
     private BeansFinder(final Project project, final PropertiesService propertiesService, final ProgressIndicator indicator) {
         this.indicator = indicator;
-//        this.project = project;
+        this.project = project;
 //        this.propertiesService = propertiesService;
         fileStatusManager = FileStatusManager.getInstance(project);
-        this.helper = PsiSearchHelper.SERVICE.getInstance(project);
+//        this.helper = PsiSearchHelper.SERVICE.getInstance(project);
         this.javaPsiFacede = JavaPsiFacade.getInstance(project);
         this.prodScope = getSearchScope(project, propertiesService);
         this.xmlScope = GlobalSearchScope.getScopeRestrictedByFileTypes(prodScope, XmlFileType.INSTANCE);
@@ -127,23 +137,23 @@ public class BeansFinder {
     private Map<String, Set<DependencyTag>> findForClass(final PsiClass clazz,
                                                          final Map<String, Set<DependencyTag>> alreadyResolved,
                                                          final Set<String> processedClassess) {
-        System.out.println("find for class: " + clazz.getName());
+        //System.out.println("find for class: " + clazz.getName());
         final List<Dependency> classDependencies = extractClassDependencies(clazz);
-        System.out.println("deps: " + classDependencies);
+        //System.out.println("deps: " + classDependencies);
         if (!classDependencies.isEmpty()) {
             final List<Dependency> filteredDependencies = filterUnresolvedDependencies(alreadyResolved, classDependencies);
-            System.out.println("filered deps: " + classDependencies);
+            //System.out.println("filered deps: " + classDependencies);
             final Map<String, Set<DependencyTag>> depTags = resolveDependencies(filteredDependencies);
             Cu.appendAllToMultiSet(alreadyResolved, depTags);
             final Set<PsiClass> extractedClasses = extractClasses(depTags);
-            System.out.println("extracted classes: " + extractedClasses);
+            //System.out.println("extracted classes: " + extractedClasses);
             for (final PsiClass psiClass : extractedClasses) {
                 final String qualifiedName = psiClass.getQualifiedName();
                 if (!processedClassess.contains(qualifiedName)) {
                     Cu.appendAllToMultiSet(alreadyResolved, findForClass(psiClass, alreadyResolved, processedClassess));
                     processedClassess.add(qualifiedName);
                 } else {
-                    System.out.println("class already processed: " + qualifiedName);
+                    //System.out.println("class already processed: " + qualifiedName);
                 }
             }
             return alreadyResolved;
@@ -171,7 +181,7 @@ public class BeansFinder {
                 }
             }
         }
-        System.out.println("Setters: " + out);
+        //System.out.println("Setters: " + out);
         return out;
     }
 
@@ -188,9 +198,8 @@ public class BeansFinder {
 
     private List<Dependency> extractFromAutowiredFields(final PsiClass clazz) {
         final List<PsiField> fields = IdeaUtils.extractAnnotatedFields(clazz, Cf.list(AT_AUTOWIRED));
-        final List<Dependency> map = Cu.map(fields, FIELD_TO_BEAN_DESC);
-        System.out.println("Autowired: " + map);
-        return map;
+        //System.out.println("Autowired: " + map);
+        return Cu.map(fields, FIELD_TO_BEAN_DESC);
     }
 
     private Set<PsiClass> extractClasses(final Map<String, Set<DependencyTag>> depTags) {
@@ -210,13 +219,13 @@ public class BeansFinder {
     private void collectForDependency(final Map<String, Set<DependencyTag>> out, final Dependency dependency) {
         final String beanId = dependency.getName();
         if (!out.containsKey(beanId) && !excludeBeans.contains(beanId)) {
-            System.out.println("for bean: " + beanId);
+            //System.out.println("for bean: " + beanId);
 
             final Set<DependencyTag> foundedForBean = resolveDependencyWithCustom(dependency);
             Cu.appendAllToMultiSet(out, dependency.getName(), foundedForBean);
 
             final Set<Dependency> refs = extractRefs(foundedForBean);
-            System.out.println("refs: " + refs);
+            //System.out.println("refs: " + refs);
             for (final Dependency ref : refs) {
                 collectForDependency(out, ref);
             }
@@ -232,13 +241,27 @@ public class BeansFinder {
 
     private Set<DependencyTag> resolveDependency(final Dependency dependency) {
         final List<DependencyTag> out = Cf.newList();
-        helper.processUsagesInNonJavaFiles(dependency.getName(), getXmlProcessor(out, dependency), xmlScope);
-        //todo: helper.findFilesWithPlainTextWords() and in processor use LowLevelSearchUtil.searchWord like in processUsagesInNonJavaFiles
+//        helper.processUsagesInNonJavaFiles(dependency.getName(), getNonJavaRefsProcessor(out, dependency), xmlScope);
+//        helper.processAllFilesWithWordInText(dependency.getName(), xmlScope, getFilesWithWordProcessor(out, dependency), true);
+
+        FindInProjectUtil.findUsages(buildFindModel(dependency), null, project, getUsagesProcessor(out, dependency));
+
         final Option<DependencyTag> tagWithPriority = getFirstTagWithPriority(out);
         if (tagWithPriority.hasValue()) {
             return Cf.set(tagWithPriority.getValue());
         }
         return Cf.newSet(out);
+    }
+
+    private FindModel buildFindModel(final Dependency dependency) {
+        final FindModel findModel = new FindModel();
+        findModel.setStringToFind(dependency.getName());
+        findModel.setCaseSensitive(true);
+        findModel.setCustomScope(true);
+        findModel.setCustomScope(xmlScope);
+        findModel.setMultipleFiles(true);
+        findModel.setFileFilter("*.xml");
+        return findModel;
     }
 
     private Option<DependencyTag> getFirstTagWithPriority(final List<DependencyTag> tags) {
@@ -253,7 +276,7 @@ public class BeansFinder {
                     if (virtualFile != null) {
                         final String tagFilePath = virtualFile.getPath();
                         if (!Su.isEmpty(priorityPath) && tagFilePath.lastIndexOf(priorityPath) != -1) {
-                            System.out.println("priority in file: " + tagFilePath + " for tag: " + tag.getText());
+                            //System.out.println("priority in file: " + tagFilePath + " for tag: " + tag.getText());
                             return Option.just(tag);
                         }
                     }
@@ -263,33 +286,80 @@ public class BeansFinder {
         return Option.nothing();
     }
 
+    private Processor<UsageInfo> getUsagesProcessor(final List<DependencyTag> out, final Dependency dependency) {
+        return new Processor<UsageInfo>() {
+            @Override
+            public boolean process(final UsageInfo usageInfo) {
+                final Option<XmlFile> checkedXmlFile = getCheckedXmlFile(usageInfo.getFile());
+                if (checkedXmlFile.hasValue()) {
+                    processReference(out, usageInfo.getNavigationOffset(), checkedXmlFile.getValue(), dependency);
+                }
+                return true;
+            }
+        };
+    }
+
     private Set<Dependency> extractRefs(final Iterable<DependencyTag> dependencyTags) {
         return Cf.newSet(DependencyTag.flatMapToRefs(dependencyTags));
     }
 
-    private PsiNonJavaFileReferenceProcessor getXmlProcessor(final List<DependencyTag> out, final Dependency dependency) {
+    //todo: remove unused
+    @SuppressWarnings("UnusedDeclaration")
+    private PsiNonJavaFileReferenceProcessor getNonJavaRefsProcessor(final List<DependencyTag> out, final Dependency dependency) {
         return new PsiNonJavaFileReferenceProcessor() {
             @Override
             public boolean process(final PsiFile fileWithBean, final int startOffset, final int endOffset) {
-                if (XmlFileType.INSTANCE.equals(fileWithBean.getFileType())) {
-                    final VirtualFile virtualFile = fileWithBean.getVirtualFile();
-                    if (virtualFile != null
-                            && "xml".equals(virtualFile.getExtension()) && isUnderVcsCheck(virtualFile)) {
-                        final String dependencyName = dependency.getName();
-                        System.out.println("found word: " + dependencyName + " in file: " + fileWithBean.getName());
-                        indicator.setText2(dependencyName + " found in " + virtualFile.getName());
+                final Option<XmlFile> checkedXmlFile = getCheckedXmlFile(fileWithBean);
+                if (checkedXmlFile.hasValue()) {
+                    processReference(out, startOffset, checkedXmlFile.getValue(), dependency);
+                }
+                return true;
+            }
+        };
+    }
 
-                        final XmlFile xmlFile = (XmlFile) fileWithBean;
-                        final XmlTag beanTag = getXmlTagAt(xmlFile, startOffset);
-                        final Option<DependencyTag> dependencyTag = dependencyTagDescriptor.buildFromTag(beanTag, dependency, xmlFile);
-                        if (dependencyTag.hasValue()) {
-                            out.add(dependencyTag.getValue());
-                        }
+    @SuppressWarnings("UnusedDeclaration")
+    private Processor<PsiFile> getFilesWithWordProcessor(final List<DependencyTag> out, final Dependency dependency) {
+        return new Processor<PsiFile>() {
+            private final StringSearcher searcher = new StringSearcher(dependency.getName(), true, true);
+
+            @Override
+            public boolean process(final PsiFile psiFile) {
+                final Option<XmlFile> checkedXmlFile = getCheckedXmlFile(psiFile);
+                if (checkedXmlFile.hasValue()) {
+                    final CharSequence text = psiFile.getViewProvider().getContents();
+                    int index = LowLevelSearchUtil.searchWord(text, 0, text.length(), searcher, indicator);
+                    while (index >= 0) {
+                        processReference(out, index, checkedXmlFile.getValue(), dependency);
+                        index = LowLevelSearchUtil.searchWord(text, index + searcher.getPattern().length(), text.length(), searcher, indicator);
                     }
                 }
                 return true;
             }
         };
+    }
+
+    private Option<XmlFile> getCheckedXmlFile(final PsiFile fileWithBean) {
+        if (XmlFileType.INSTANCE.equals(fileWithBean.getFileType())) {
+            final VirtualFile virtualFile = fileWithBean.getVirtualFile();
+            if (virtualFile != null
+                    && "xml".equals(virtualFile.getExtension()) && isUnderVcsCheck(virtualFile)) {
+                return Option.just((XmlFile) fileWithBean);
+            }
+        }
+        return Option.nothing();
+    }
+
+    private void processReference(final List<DependencyTag> out, final int startOffset, final XmlFile xmlFile, final Dependency dependency) {
+        final String dependencyName = dependency.getName();
+        //System.out.println("found word: " + dependencyName + " in file: " + xmlFile.getName());
+        indicator.setText2(dependencyName + " found in " + xmlFile.getName());
+
+        final XmlTag beanTag = getXmlTagAt(xmlFile, startOffset);
+        final Option<DependencyTag> dependencyTag = dependencyTagDescriptor.buildFromTag(beanTag, dependency, xmlFile);
+        if (dependencyTag.hasValue()) {
+            out.add(dependencyTag.getValue());
+        }
     }
 
     private boolean isUnderVcsCheck(final VirtualFile virtualFile) {

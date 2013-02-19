@@ -135,19 +135,27 @@ public class DependencyTagDescriptor {
     }
 
     public DependencyTag newBeanTag(final XmlTag tag, final Option<XmlFile> xmlFile) {
-        return new DependencyTag(tag, xmlFile) {
+        return new DependencyTag(lazyBeanTag(tag), xmlFile) {
             @Override
             protected Set<PsiClass> extractClassesFromTag(final XmlTag someTag) {
                 final String className = someTag.getAttributeValue("class");
                 if (className != null) {
-                    System.out.println("trying extract class: " + className);
-                    final Set<PsiClass> result = Cf.set(javaPsiFacade.findClasses(className, prodScope));
-                    System.out.println("extracted for: " + className + " :: " + result);
-                    return result;
+//                    System.out.println("trying extract class: " + className);
+                    return Cf.set(javaPsiFacade.findClasses(className, prodScope));
+//                    System.out.println("extracted for: " + className + " :: " + result);
                 }
                 return Cf.emptyS();
             }
         };
+    }
+
+    private XmlTag lazyBeanTag(final XmlTag tag) {
+        if ("false".equals(tag.getAttributeValue("lazy-init"))) {
+            final XmlTag copy = (XmlTag) tag.copy();
+            copy.setAttribute("lazy-init", "true");
+            return copy;
+        }
+        return tag;
     }
 
     public DependencyTag newAliasTag(final XmlTag tag, final Dependency dependency, final Option<XmlFile> xmlFile) {

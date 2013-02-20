@@ -1,4 +1,9 @@
-package ru.korgov.intellij.lspr.properties;
+package ru.korgov.intellij.lspr.properties.api;
+
+import ru.korgov.util.alias.Cf;
+
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Author: Kirill Korgov (kirill@korgov.ru)
@@ -18,11 +23,12 @@ public class Constants {
 
     public static final String DEFAULT_FOOTER = "</beans>";
 
-    public static final String DEFAULT_EXCLUDE_BEANS = "jdbc\n" +
-            "jdbcTemplate\n" +
-            "dataSource\n" +
-            "transactionTemplate\n" +
-            "";
+    private static final List<String> DEFAULT_EXCLUDE_BEANS = Cf.list(
+            "jdbc",
+            "jdbcTemplate",
+            "dataSource",
+            "transactionTemplate"
+    );
 
     public static final String DEFAULT_SAVE_PATH_SUFFIX = "src/test";
 
@@ -42,5 +48,9 @@ public class Constants {
     public static final String PROP_SAVE_PATH_SUFFIX = "save-path-suffix";
 
     private Constants() {
+    }
+
+    public static List<String> getDefaultExcludeBeans() {
+        return Collections.unmodifiableList(DEFAULT_EXCLUDE_BEANS);
     }
 }

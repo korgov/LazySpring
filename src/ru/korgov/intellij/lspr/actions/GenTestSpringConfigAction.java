@@ -1,6 +1,5 @@
-package ru.korgov.intellij.lspr;
+package ru.korgov.intellij.lspr.actions;
 
-import com.intellij.ide.util.PropertiesComponent;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.PlatformDataKeys;
@@ -21,9 +20,11 @@ import com.intellij.psi.PsiClass;
 import com.intellij.psi.xml.XmlTag;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import ru.korgov.intellij.lspr.model.DependencyTag;
-import ru.korgov.intellij.lspr.properties.ConflictsPolicity;
-import ru.korgov.intellij.lspr.properties.PropertiesService;
+import ru.korgov.intellij.lspr.impl.BeansFinder;
+import ru.korgov.intellij.lspr.LazySpringProjectComponent;
+import ru.korgov.intellij.lspr.impl.DependencyTag;
+import ru.korgov.intellij.lspr.properties.api.ConflictsPolicity;
+import ru.korgov.intellij.lspr.properties.api.XProperties;
 import ru.korgov.intellij.util.IdeaUtils;
 import ru.korgov.util.ObjectUtils;
 import ru.korgov.util.alias.Cu;
@@ -47,7 +48,8 @@ public class GenTestSpringConfigAction extends AnAction {
     public void actionPerformed(final AnActionEvent e) {
         final Project project = e.getData(PlatformDataKeys.PROJECT);
         final Editor editor = e.getData(PlatformDataKeys.EDITOR);
-        final PropertiesService propertiesService = PropertiesService.getInstance(PropertiesComponent.getInstance(), project);
+        final XProperties XPropertiesService = LazySpringProjectComponent.getInstance(project).getState();
+//        final XProperties XPropertiesService = SimpleProperties.getInstance(PropertiesComponent.getInstance(project), project);
         if (project != null && editor != null) {
             new Task.Backgroundable(project, "Resolving dependencies..", true) {
                 @Override
@@ -57,12 +59,12 @@ public class GenTestSpringConfigAction extends AnAction {
                     final PsiClass clazz = getCurrentClass(editor);
 
                     indicator.setFraction(0.2);
-                    final BeansFinder beansFinder = getBeansFinder(indicator, project, propertiesService);
+                    final BeansFinder beansFinder = getBeansFinder(indicator, project, XPropertiesService);
                     indicator.setFraction(0.4);
                     final Map<String, Set<DependencyTag>> requiredBeans = findForClass(clazz, beansFinder);
                     indicator.setFraction(0.8);
                     indicator.setText("Saving config file..");
-                    createConfig(project, clazz, requiredBeans, propertiesService);
+                    createConfig(project, clazz, requiredBeans, XPropertiesService);
                     indicator.setFraction(1.0);
                 }
             }.setCancelText("Cancel task.").queue();
@@ -87,20 +89,20 @@ public class GenTestSpringConfigAction extends AnAction {
         });
     }
 
-    private BeansFinder getBeansFinder(final ProgressIndicator indicator, final Project project, final PropertiesService propertiesService) {
+    private BeansFinder getBeansFinder(final ProgressIndicator indicator, final Project project, final XProperties XPropertiesService) {
         return ApplicationManager.getApplication().runReadAction(new Computable<BeansFinder>() {
             @Override
             public BeansFinder compute() {
-                return BeansFinder.getInstance(project, propertiesService, indicator);
+                return BeansFinder.getInstance(project, XPropertiesService, indicator);
             }
         });
     }
 
-    private void createConfig(final Project project, final PsiClass clazz, final Map<String, Set<DependencyTag>> beanNameToTag, final PropertiesService propertiesService) {
-        final ConflictsPolicity conflictsPolicity = propertiesService.getConflictsPolicity();
-        final String beansHeader = propertiesService.getBeansHeader();
-        final String beansFooter = propertiesService.getBeansFooter();
-        final String savePathSuffix = propertiesService.getSavePathSuffix();
+    private void createConfig(final Project project, final PsiClass clazz, final Map<String, Set<DependencyTag>> beanNameToTag, final XProperties XPropertiesService) {
+        final ConflictsPolicity conflictsPolicity = XPropertiesService.getConflictsPolicity();
+        final String beansHeader = XPropertiesService.getBeansHeader();
+        final String beansFooter = XPropertiesService.getBeansFooter();
+        final String savePathSuffix = XPropertiesService.getSavePathSuffix();
         final Application application = ApplicationManager.getApplication();
 
         //todo: ask add to VCS after save

@@ -1,4 +1,4 @@
-package ru.korgov.intellij.lspr.model;
+package ru.korgov.intellij.lspr.impl;
 
 import com.intellij.psi.JavaPsiFacade;
 import com.intellij.psi.PsiClass;
@@ -8,6 +8,7 @@ import com.intellij.psi.PsiType;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.psi.xml.XmlFile;
 import com.intellij.psi.xml.XmlTag;
+import com.intellij.psi.XmlElementFactory;
 import ru.korgov.util.alias.Cf;
 import ru.korgov.util.alias.Cu;
 import ru.korgov.util.alias.Su;
@@ -27,6 +28,7 @@ public class DependencyTagDescriptor {
 
     private final GlobalSearchScope prodScope;
     private final JavaPsiFacade javaPsiFacade;
+    private XmlElementFactory xmlElementFactory;
     private final PsiElementFactory elementFactory;
 
     private final Map<String, DependencyTagBuilder> builders = Cu.zipMap(
@@ -62,7 +64,8 @@ public class DependencyTagDescriptor {
     private boolean validBeanTag(final XmlTag tag, final Dependency dependency) {
         final String clazzName = tag.getAttributeValue("class");
         if (clazzName != null) {
-            return validDependencyClass(elementFactory.createTypeByFQClassName(clazzName), dependency);
+            final PsiClassType classValue = elementFactory.createTypeByFQClassName(clazzName);
+            return validDependencyClass(classValue, dependency);
         }
         return !Su.isEmpty(tag.getAttributeValue("parent"));
     }
@@ -83,10 +86,15 @@ public class DependencyTagDescriptor {
         };
     }
 
-    public DependencyTagDescriptor(final GlobalSearchScope prodScope, final JavaPsiFacade javaPsiFacade) {
+    public DependencyTagDescriptor(final GlobalSearchScope prodScope, final JavaPsiFacade javaPsiFacade, final XmlElementFactory xmlElementFactory) {
         this.prodScope = prodScope;
         this.javaPsiFacade = javaPsiFacade;
+        this.xmlElementFactory = xmlElementFactory;
         this.elementFactory = javaPsiFacade.getElementFactory();
+    }
+
+    public XmlElementFactory getXmlElementFactory() {
+        return xmlElementFactory;
     }
 
     public boolean isDependencyTag(final XmlTag xmlTag) {
@@ -97,7 +105,11 @@ public class DependencyTagDescriptor {
         if (tag != null) {
             final DependencyTagBuilder dependencyTagBuilder = builders.get(tag.getName());
             if (dependencyTagBuilder != null) {
-                return dependencyTagBuilder.buildFromTag(tag, dependency, xmlFile);
+                try {
+                    return dependencyTagBuilder.buildFromTag(tag, dependency, xmlFile);
+                } catch (Exception ignored) {
+                    //todo: log this exception
+                }
             }
         }
         return Option.nothing();

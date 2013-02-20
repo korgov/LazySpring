@@ -10,20 +10,19 @@
     </application-components>
 
     <project-components>
+        <component>
+            <implementation-class>ru.korgov.intellij.lspr.LazySpringProjectComponent</implementation-class>
+        </component>
     </project-components>
 
     <actions>
 
-        <group id="LazySpring" text="Lazy Spring" description="Helper for configuring you test" popup="true">
+        <group id="LazySpring" text="Lazy Spring" description="Helper for configuring you test" popup="false">
             <add-to-group group-id="ToolsMenu" anchor="last"/>
-                <action id="LazySpring.GenTestSpringConfigAction" class="ru.korgov.intellij.lspr.GenTestSpringConfigAction"
-                        text="Generate beans!"
-                        description="Generates xml file with all beans needed for current test.">
-                    <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl alt L"/>
-                </action>
-                <action id="LazySpring.ShowPropertiesAction" class="ru.korgov.intellij.lspr.ShowPropertiesAction"
-                        text="Properties"
-                        description="Properties of beans generation">
+                <action id="LazySpring.GenTestSpringConfigAction" class="ru.korgov.intellij.lspr.actions.GenTestSpringConfigAction"
+                        text="Generate context config"
+                        description="Generates xml file with all beans needed for current class.">
+                    <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt shift L"/>
                 </action>
             </group>
 

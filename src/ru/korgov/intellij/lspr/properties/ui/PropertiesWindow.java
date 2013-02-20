@@ -1,7 +1,11 @@
-package ru.korgov.intellij.lspr.properties;
+package ru.korgov.intellij.lspr.properties.ui;
 
 import org.apache.batik.util.gui.xmleditor.XMLEditorKit;
 import org.jetbrains.annotations.Nullable;
+import ru.korgov.intellij.lspr.properties.api.ConflictsPolicity;
+import ru.korgov.intellij.lspr.properties.api.Constants;
+import ru.korgov.intellij.lspr.properties.api.SearchScopeEnum;
+import ru.korgov.intellij.lspr.properties.api.XProperties;
 import ru.korgov.util.alias.Cf;
 import ru.korgov.util.alias.Su;
 
@@ -19,8 +23,6 @@ public class PropertiesWindow {
     private JEditorPane beansFooterPane;
     private JEditorPane beansHeaderPane;
     private JButton setDefaultHeadersButton;
-    private JButton okButton;
-    private JButton cancelButton;
     private JCheckBox productionScope;
     private JCheckBox testScope;
     private JCheckBox librariesScope;
@@ -29,7 +31,6 @@ public class PropertiesWindow {
     private JRadioButton conflictsAutoOneRadBut;
     private JRadioButton conflictsAutoAllRadBut;
     private JRadioButton conflictsManualSelectRadBut;
-    private JButton applyButton;
     private JPanel mainPanel;
     private JEditorPane customBeansMappingPane;
     private JCheckBox customBeansMappingCheckbox;
@@ -40,36 +41,15 @@ public class PropertiesWindow {
         return mainPanel;
     }
 
-    public PropertiesWindow(final JFrame frame, final PropertiesService service) {
+    public PropertiesWindow() {
 
         setFormatters();
-
-        loadCurrentProperties(service);
 
         setDefaultHeadersButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(final ActionEvent e) {
                 beansHeaderPane.setText(Constants.DEFAULT_HEADER);
                 beansFooterPane.setText(Constants.DEFAULT_FOOTER);
-            }
-        });
-        applyButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(final ActionEvent e) {
-                saveCurrentSettings(service);
-            }
-        });
-        okButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(final ActionEvent e) {
-                saveCurrentSettings(service);
-                frame.dispose();
-            }
-        });
-        cancelButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(final ActionEvent e) {
-                frame.dispose();
             }
         });
     }
@@ -81,21 +61,23 @@ public class PropertiesWindow {
         beansHeaderPane.setEditorKit(xmlKit);
     }
 
-    private void loadCurrentProperties(final PropertiesService service) {
-        beansHeaderPane.setText(service.getBeansHeader());
-        beansFooterPane.setText(service.getBeansFooter());
-        selectScopes(service);
-        excludeBeansTextArea.setText(Su.join(service.getExcludeBeans(), "\n"));
-        priorityFilePathsTextArea.setText(Su.join(service.getPriorityPaths(), "\n"));
-        selectConflictPolicity(service);
-        customBeansMappingCheckbox.setSelected(service.getCustomBeansMappingStatus());
-        excludeBeansCheckbox.setSelected(service.getExcludeBeansStatus());
-        onlyVCSFilesCheckbox.setSelected(service.getOnlyVcsFilesStatus());
-        customBeansMappingPane.setText(service.geCustomBeansMappingAsText());
+    public void loadCurrentProperties(final XProperties properties) {
+        if (properties != null) {
+            beansHeaderPane.setText(properties.getBeansHeader());
+            beansFooterPane.setText(properties.getBeansFooter());
+            selectScopes(properties);
+            excludeBeansTextArea.setText(Su.join(properties.getExcludeBeans(), "\n"));
+            priorityFilePathsTextArea.setText(Su.join(properties.getPriorityPaths(), "\n"));
+            selectConflictPolicity(properties);
+            customBeansMappingCheckbox.setSelected(properties.getCustomBeansMappingStatus());
+            excludeBeansCheckbox.setSelected(properties.getExcludeBeansStatus());
+            onlyVCSFilesCheckbox.setSelected(properties.getOnlyVcsFilesStatus());
+            customBeansMappingPane.setText(properties.getCustomBeansMappingAsText());
+        }
     }
 
-    private void selectConflictPolicity(final PropertiesService service) {
-        final ConflictsPolicity policity = service.getConflictsPolicity();
+    private void selectConflictPolicity(final XProperties properties) {
+        final ConflictsPolicity policity = properties.getConflictsPolicity();
         switch (policity) {
             case AUTO_ALL:
                 conflictsAutoAllRadBut.setSelected(true);
@@ -109,14 +91,14 @@ public class PropertiesWindow {
         }
     }
 
-    private void selectScopes(final PropertiesService service) {
-        final Set<SearchScopeEnum> scopes = service.getSearchScope();
+    private void selectScopes(final XProperties properties) {
+        final Set<SearchScopeEnum> scopes = properties.getSearchScope();
         productionScope.setSelected(scopes.contains(SearchScopeEnum.PRODUCTION));
         librariesScope.setSelected(scopes.contains(SearchScopeEnum.LIBRARIES));
         testScope.setSelected(scopes.contains(SearchScopeEnum.TEST));
     }
 
-    private void saveCurrentSettings(final PropertiesService service) {
+    public void saveCurrentSettings(final XProperties service) {
         service.setHeader(beansHeaderPane.getText());
         service.setFooter(beansFooterPane.getText());
         service.setExcludeBeans(Cf.list(excludeBeansTextArea.getText().split("\\s")));
@@ -129,7 +111,7 @@ public class PropertiesWindow {
         service.setCustomBeansMappingFromText(customBeansMappingPane.getText());
     }
 
-    private void setConflictsPolicityIfExists(final PropertiesService service) {
+    private void setConflictsPolicityIfExists(final XProperties service) {
         final ConflictsPolicity selectedPolicity = getSelectedPolicity();
         if (selectedPolicity != null) {
             service.setConflictsPolicity(selectedPolicity);
@@ -170,4 +152,9 @@ public class PropertiesWindow {
     }
 
 
+    public boolean isModified(final XProperties state) {
+        final XProperties currentState = state.getDefaultInstance();
+        saveCurrentSettings(currentState);
+        return !state.equals(currentState);
+    }
 }

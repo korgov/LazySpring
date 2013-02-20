@@ -1,4 +1,4 @@
-package ru.korgov.intellij.lspr.model;
+package ru.korgov.intellij.lspr.impl;
 
 import com.intellij.psi.PsiClass;
 import com.intellij.psi.xml.XmlFile;
@@ -17,7 +17,10 @@ import java.util.Set;
  */
 public abstract class DependencyTag {
 
-    private static final List<String> DEFAULT_REF_ATTRS = Cf.list("ref", "bean", "parent", "value-ref", "key-ref");
+    private static final List<String> DEFAULT_REF_ATTRS = Cf.list(
+            "ref", "bean", "parent", "factory-bean", "depends-on",
+            "value-ref", "key-ref"
+    );
 
     private final XmlTag tag;
     private final String text;

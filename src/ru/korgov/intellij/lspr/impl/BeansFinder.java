@@ -1,4 +1,4 @@
-package ru.korgov.intellij.lspr;
+package ru.korgov.intellij.lspr.impl;
 
 import com.intellij.find.FindModel;
 import com.intellij.find.impl.FindInProjectUtil;
@@ -16,22 +16,17 @@ import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiMethod;
 import com.intellij.psi.PsiParameter;
 import com.intellij.psi.PsiType;
-import com.intellij.psi.impl.search.LowLevelSearchUtil;
+import com.intellij.psi.XmlElementFactory;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.psi.search.ProjectAndLibrariesScope;
 import com.intellij.psi.search.ProjectScopeBuilder;
-import com.intellij.psi.search.PsiNonJavaFileReferenceProcessor;
 import com.intellij.psi.xml.XmlFile;
 import com.intellij.psi.xml.XmlTag;
 import com.intellij.usageView.UsageInfo;
 import com.intellij.util.Processor;
-import com.intellij.util.text.StringSearcher;
 import org.jetbrains.annotations.Nullable;
-import ru.korgov.intellij.lspr.model.Dependency;
-import ru.korgov.intellij.lspr.model.DependencyTag;
-import ru.korgov.intellij.lspr.model.DependencyTagDescriptor;
-import ru.korgov.intellij.lspr.properties.PropertiesService;
-import ru.korgov.intellij.lspr.properties.SearchScopeEnum;
+import ru.korgov.intellij.lspr.properties.api.SearchScopeEnum;
+import ru.korgov.intellij.lspr.properties.api.XProperties;
 import ru.korgov.intellij.util.IdeaUtils;
 import ru.korgov.util.Filter;
 import ru.korgov.util.alias.Cf;
@@ -55,8 +50,6 @@ import static com.intellij.psi.search.GlobalSearchScopes.projectTestScope;
  */
 
 public class BeansFinder {
-//    todo: use logger
-//    private static final Logger log = Logger.getLogger(BeansFinder.class);
 
 //    todo: check @Required annotation in setters
 //    private static final String AT_REQUIRED = "org.springframework.beans.factory.annotation.Required";
@@ -72,12 +65,10 @@ public class BeansFinder {
         }
     };
     private final GlobalSearchScope prodScope;
-    //    private final PsiSearchHelper helper;
     private final DependencyTagDescriptor dependencyTagDescriptor;
     private final GlobalSearchScope xmlScope;
     private final JavaPsiFacade javaPsiFacede;
     private final Project project;
-    //    private final PropertiesService propertiesService;
     private final Set<String> excludeBeans = Cf.newSet();
     private final Map<String, DependencyTag> customBeans = Cf.newMap();
     private final FileStatusManager fileStatusManager;
@@ -85,24 +76,22 @@ public class BeansFinder {
     private final ProgressIndicator indicator;
     private final Set<String> priorityPaths = Cf.newSet();
 
-    private BeansFinder(final Project project, final PropertiesService propertiesService, final ProgressIndicator indicator) {
+    private BeansFinder(final Project project, final XProperties properties, final ProgressIndicator indicator) {
         this.indicator = indicator;
         this.project = project;
-//        this.propertiesService = propertiesService;
         fileStatusManager = FileStatusManager.getInstance(project);
-//        this.helper = PsiSearchHelper.SERVICE.getInstance(project);
         this.javaPsiFacede = JavaPsiFacade.getInstance(project);
-        this.prodScope = getSearchScope(project, propertiesService);
+        this.prodScope = getSearchScope(project, properties);
         this.xmlScope = GlobalSearchScope.getScopeRestrictedByFileTypes(prodScope, XmlFileType.INSTANCE);
-        this.excludeBeans.addAll(propertiesService.getCheckedExcludeBeans());
-        this.onlyVcsFiles = propertiesService.getOnlyVcsFilesStatus();
-        this.dependencyTagDescriptor = new DependencyTagDescriptor(prodScope, javaPsiFacede);
-        this.customBeans.putAll(propertiesService.getCheckedCustomBeansMappingAsBeans(dependencyTagDescriptor));
-        this.priorityPaths.addAll(propertiesService.getPriorityPaths());
+        this.excludeBeans.addAll(properties.getCheckedExcludeBeans());
+        this.onlyVcsFiles = properties.getOnlyVcsFilesStatus();
+        this.dependencyTagDescriptor = new DependencyTagDescriptor(prodScope, javaPsiFacede, XmlElementFactory.getInstance(project));
+        this.customBeans.putAll(properties.getCheckedCustomBeansMappingAsBeans(dependencyTagDescriptor));
+        this.priorityPaths.addAll(properties.getPriorityPaths());
     }
 
-    private GlobalSearchScope getSearchScope(final Project prj, final PropertiesService propsService) {
-        final Set<SearchScopeEnum> searchScopes = propsService.getSearchScope();
+    private GlobalSearchScope getSearchScope(final Project prj, final XProperties propsServiceX) {
+        final Set<SearchScopeEnum> searchScopes = propsServiceX.getSearchScope();
         final ProjectScopeBuilder projectScopeBuilder = ProjectScopeBuilder.getInstance(prj);
         GlobalSearchScope scope = projectScopeBuilder.buildAllScope();
         scope.uniteWith(new ProjectAndLibrariesScope(prj));
@@ -122,8 +111,8 @@ public class BeansFinder {
         return scope;
     }
 
-    public static BeansFinder getInstance(final Project project, final PropertiesService propertiesService, final ProgressIndicator indicator) {
-        return new BeansFinder(project, propertiesService, indicator);
+    public static BeansFinder getInstance(final Project project, final XProperties XPropertiesService, final ProgressIndicator indicator) {
+        return new BeansFinder(project, XPropertiesService, indicator);
     }
 
     public Map<String, Set<DependencyTag>> resolveDependencies(final List<Dependency> dependencies) {
@@ -302,42 +291,6 @@ public class BeansFinder {
 
     private Set<Dependency> extractRefs(final Iterable<DependencyTag> dependencyTags) {
         return Cf.newSet(DependencyTag.flatMapToRefs(dependencyTags));
-    }
-
-    //todo: remove unused
-    @SuppressWarnings("UnusedDeclaration")
-    private PsiNonJavaFileReferenceProcessor getNonJavaRefsProcessor(final List<DependencyTag> out, final Dependency dependency) {
-        return new PsiNonJavaFileReferenceProcessor() {
-            @Override
-            public boolean process(final PsiFile fileWithBean, final int startOffset, final int endOffset) {
-                final Option<XmlFile> checkedXmlFile = getCheckedXmlFile(fileWithBean);
-                if (checkedXmlFile.hasValue()) {
-                    processReference(out, startOffset, checkedXmlFile.getValue(), dependency);
-                }
-                return true;
-            }
-        };
-    }
-
-    @SuppressWarnings("UnusedDeclaration")
-    private Processor<PsiFile> getFilesWithWordProcessor(final List<DependencyTag> out, final Dependency dependency) {
-        return new Processor<PsiFile>() {
-            private final StringSearcher searcher = new StringSearcher(dependency.getName(), true, true);
-
-            @Override
-            public boolean process(final PsiFile psiFile) {
-                final Option<XmlFile> checkedXmlFile = getCheckedXmlFile(psiFile);
-                if (checkedXmlFile.hasValue()) {
-                    final CharSequence text = psiFile.getViewProvider().getContents();
-                    int index = LowLevelSearchUtil.searchWord(text, 0, text.length(), searcher, indicator);
-                    while (index >= 0) {
-                        processReference(out, index, checkedXmlFile.getValue(), dependency);
-                        index = LowLevelSearchUtil.searchWord(text, index + searcher.getPattern().length(), text.length(), searcher, indicator);
-                    }
-                }
-                return true;
-            }
-        };
     }
 
     private Option<XmlFile> getCheckedXmlFile(final PsiFile fileWithBean) {

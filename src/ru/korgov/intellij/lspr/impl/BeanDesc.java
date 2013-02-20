@@ -1,4 +1,4 @@
-package ru.korgov.intellij.lspr;
+package ru.korgov.intellij.lspr.impl;
 
 import com.intellij.psi.PsiType;
 import org.jetbrains.annotations.Nullable;

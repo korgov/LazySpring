@@ -1,4 +1,4 @@
-package ru.korgov.intellij.lspr.model;
+package ru.korgov.intellij.lspr.impl;
 
 import com.intellij.psi.PsiType;
 import ru.korgov.util.collection.Option;

@@ -1,30 +1,26 @@
 package ru.korgov.intellij.lspr.properties;
 
 import com.intellij.ide.util.PropertiesComponent;
-import com.intellij.openapi.application.ApplicationManager;
-import com.intellij.openapi.project.Project;
-import com.intellij.openapi.util.Computable;
-import com.intellij.psi.XmlElementFactory;
-import com.intellij.psi.xml.XmlTag;
-import ru.korgov.intellij.lspr.model.DependencyTag;
-import ru.korgov.intellij.lspr.model.DependencyTagDescriptor;
+import ru.korgov.intellij.lspr.properties.api.AbstractXProperties;
+import ru.korgov.intellij.lspr.properties.api.ConflictsPolicity;
+import ru.korgov.intellij.lspr.properties.api.Constants;
+import ru.korgov.intellij.lspr.properties.api.SearchScopeEnum;
+import ru.korgov.intellij.lspr.properties.api.XProperties;
 import ru.korgov.util.alias.Cf;
 import ru.korgov.util.alias.Cu;
 import ru.korgov.util.alias.Fu;
 import ru.korgov.util.alias.Su;
-import ru.korgov.util.func.Function;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 /**
  * Author: Kirill Korgov (kirill@korgov.ru)
  * Date: 02.12.12
  */
-public class PropertiesService {
+@Deprecated
+public class SimpleProperties extends AbstractXProperties {
 
     private static final Fu<String, String> TRIM = new Fu<String, String>() {
         @Override
@@ -32,51 +28,36 @@ public class PropertiesService {
             return v.trim();
         }
     };
-    private static final Fu<XmlTag, String> TAG_TO_ID_OR_NAME = new Fu<XmlTag, String>() {
-        @Override
-        public String apply(final XmlTag tag) {
-            final String beanId = tag.getAttributeValue("id");
-            if (!Su.isEmpty(beanId)) {
-                return beanId;
-            }
-            return tag.getAttributeValue("name");
-        }
-    };
+
     private final PropertiesComponent propertiesComponent;
-    private final XmlElementFactory xmlElementFactory;
 
-
-    private PropertiesService(final PropertiesComponent propertiesComponent, final Project project) {
+    private SimpleProperties(final PropertiesComponent propertiesComponent) {
         this.propertiesComponent = propertiesComponent;
-        this.xmlElementFactory = XmlElementFactory.getInstance(project);
     }
 
-    public static PropertiesService getInstance(final PropertiesComponent propertiesComponent, final Project project) {
-        return new PropertiesService(propertiesComponent, project);
+    public static XProperties getInstance(final PropertiesComponent propertiesComponent) {
+        return new SimpleProperties(propertiesComponent);
     }
 
-    public Set<String> getPriorityPaths() {
+    @Override
+    public List<String> getPriorityPaths() {
         final String priorityPathsLines = propertiesComponent.getValue(Constants.PROP_PRIORITY_PATHS, "");
-        return Cf.linkedSet(priorityPathsLines.split("\\n"));
+        return Cf.list(priorityPathsLines.split("\\n"));
     }
 
+    @Override
     public List<String> getExcludeBeans() {
-        final String excludeBeansLines = propertiesComponent.getValue(Constants.PROP_EXCLUDE_BEANS, Constants.DEFAULT_EXCLUDE_BEANS);
+        final String excludeBeansLines = propertiesComponent.getValue(Constants.PROP_EXCLUDE_BEANS, Su.join(Constants.getDefaultExcludeBeans(), "\n"));
         return Cf.list(excludeBeansLines.split("\\n"));
     }
 
-    public List<String> getCheckedExcludeBeans() {
-        if (getExcludeBeansStatus()) {
-            return getExcludeBeans();
-        }
-        return Collections.emptyList();
-    }
-
+    @Override
     public ConflictsPolicity getConflictsPolicity() {
         final String policityName = propertiesComponent.getValue(Constants.PROP_CONFLICTS_POLICITY, ConflictsPolicity.AUTO_ALL.name());
         return ConflictsPolicity.valueOf(policityName);
     }
 
+    @Override
     public Set<SearchScopeEnum> getSearchScope() {
         final Set<SearchScopeEnum> out = Cf.newSet();
         for (final SearchScopeEnum scopeEnum : SearchScopeEnum.values()) {
@@ -88,102 +69,75 @@ public class PropertiesService {
         return out.isEmpty() ? Cf.set(SearchScopeEnum.LIBRARIES, SearchScopeEnum.PRODUCTION) : out;
     }
 
+    @Override
     public String getBeansHeader() {
         return propertiesComponent.getValue(Constants.PROP_BEANS_HEADER, Constants.DEFAULT_HEADER);
     }
 
+    @Override
     public String getBeansFooter() {
         return propertiesComponent.getValue(Constants.PROP_BEANS_FOOTER, Constants.DEFAULT_FOOTER);
     }
 
 
+    @Override
     public void setExcludeBeans(final List<String> beans) {
         propertiesComponent.setValue(Constants.PROP_EXCLUDE_BEANS, Su.join(Cu.map(beans, TRIM), "\n"));
     }
 
+    @Override
     public void setExcludeBeansStatus(final boolean status) {
         propertiesComponent.setValue(Constants.PROP_EXCLUDE_BEANS_STATUS, status ? Constants.PROP_TRUE : Constants.PROP_FALSE);
     }
 
+    @Override
     public boolean getExcludeBeansStatus() {
         final String status = propertiesComponent.getValue(Constants.PROP_EXCLUDE_BEANS_STATUS, Constants.PROP_TRUE);
         return Constants.PROP_TRUE.equals(status);
     }
 
+    @Override
     public void setCustomBeansMappingStatus(final boolean status) {
         propertiesComponent.setValue(Constants.PROP_CUSTOM_BEANS_MAPPING_STATUS, status ? Constants.PROP_TRUE : Constants.PROP_FALSE);
     }
 
+    @Override
     public void setOnlyVcsFilesStatus(final boolean status) {
         propertiesComponent.setValue(Constants.PROP_ONLY_VCF_FILES_STATUS, status ? Constants.PROP_TRUE : Constants.PROP_FALSE);
     }
 
+    @Override
     public boolean getCustomBeansMappingStatus() {
         final String status = propertiesComponent.getValue(Constants.PROP_CUSTOM_BEANS_MAPPING_STATUS, Constants.PROP_TRUE);
         return Constants.PROP_TRUE.equals(status);
     }
 
+    @Override
     public void setCustomBeansMappingFromText(final String xmlBeans) {
         propertiesComponent.setValue(Constants.PROP_CUSTOM_BEANS_MAPPING, xmlBeans);
     }
 
-    public String geCustomBeansMappingAsText() {
+    @Override
+    public String getCustomBeansMappingAsText() {
         return propertiesComponent.getValue(Constants.PROP_CUSTOM_BEANS_MAPPING, "");
     }
 
-    public Map<String, DependencyTag> getCustomBeansMappingAsBeans(final DependencyTagDescriptor dependencyTagDescriptor) {
-        return convertMappingToBeans(geCustomBeansMappingAsText(), dependencyTagDescriptor);
-    }
-
-    public Map<String, DependencyTag> getCheckedCustomBeansMappingAsBeans(final DependencyTagDescriptor dependencyTagDescriptor) {
-        if (getCustomBeansMappingStatus()) {
-            return getCustomBeansMappingAsBeans(dependencyTagDescriptor);
-        }
-        return Collections.emptyMap();
-    }
-
-    private Map<String, DependencyTag> convertMappingToBeans(final String xmlBeans, final DependencyTagDescriptor dependencyTagDescriptor) {
-        final String trimmed = xmlBeans.trim();
-        if (!Su.isEmpty(trimmed)) {
-            try {
-                final XmlTag rootTag = createTagFromText(trimmed);
-                return Cu.mapFromIterable(TAG_TO_ID_OR_NAME, toDependencyTagFu(dependencyTagDescriptor), Cf.list(rootTag.findSubTags("bean")));
-            } catch (final Exception ignored) {
-            }
-        }
-        return Collections.emptyMap();
-    }
-
-    private Function<XmlTag, DependencyTag> toDependencyTagFu(final DependencyTagDescriptor dependencyTagDescriptor) {
-        return new Fu<XmlTag, DependencyTag>() {
-            @Override
-            public DependencyTag apply(final XmlTag tag) {
-                return dependencyTagDescriptor.newBeanTag(tag);
-            }
-        };
-    }
-
-    private XmlTag createTagFromText(final String trimmed) {
-        return ApplicationManager.getApplication().runReadAction(new Computable<XmlTag>() {
-            @Override
-            public XmlTag compute() {
-                return xmlElementFactory.createTagFromText("<beans>" + trimmed + "</beans>");
-            }
-        });
-    }
-
+    @Override
     public void setConflictsPolicity(final ConflictsPolicity policity) {
         propertiesComponent.setValue(Constants.PROP_CONFLICTS_POLICITY, policity.name());
     }
 
+    @Override
     public void setHeader(final String header) {
         propertiesComponent.setValue(Constants.PROP_BEANS_HEADER, header);
     }
 
+    @Override
     public void setFooter(final String footer) {
         propertiesComponent.setValue(Constants.PROP_BEANS_FOOTER, footer);
     }
 
+    @Override
     public void setSearchScope(final Collection<SearchScopeEnum> scopes) {
         final Set<SearchScopeEnum> scopesSet = Cf.newSet(scopes);
         for (final SearchScopeEnum someScope : SearchScopeEnum.values()) {
@@ -192,19 +146,28 @@ public class PropertiesService {
         }
     }
 
+    @Override
     public boolean getOnlyVcsFilesStatus() {
         final String status = propertiesComponent.getValue(Constants.PROP_ONLY_VCF_FILES_STATUS, Constants.PROP_TRUE);
         return Constants.PROP_TRUE.equals(status);
     }
 
-    public void setPriorityPaths(final Collection<String> priorityPaths) {
+    @Override
+    public void setPriorityPaths(final List<String> priorityPaths) {
         propertiesComponent.setValue(Constants.PROP_PRIORITY_PATHS, Su.join(Cu.map(priorityPaths, TRIM), "\n"));
     }
 
+    @Override
+    public XProperties getDefaultInstance() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public String getSavePathSuffix() {
         return propertiesComponent.getValue(Constants.PROP_SAVE_PATH_SUFFIX, Constants.DEFAULT_SAVE_PATH_SUFFIX);
     }
 
+    @Override
     public void setSavePathSuffix(final String suffix) {
         propertiesComponent.setValue(Constants.PROP_SAVE_PATH_SUFFIX, suffix);
     }

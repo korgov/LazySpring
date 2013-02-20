@@ -84,7 +84,7 @@ public class BeansFinder {
         this.prodScope = getSearchScope(project, properties);
         this.xmlScope = GlobalSearchScope.getScopeRestrictedByFileTypes(prodScope, XmlFileType.INSTANCE);
         this.excludeBeans.addAll(properties.getCheckedExcludeBeans());
-        this.onlyVcsFiles = properties.getOnlyVcsFilesStatus();
+        this.onlyVcsFiles = properties.isOnlyVcsFiles();
         this.dependencyTagDescriptor = new DependencyTagDescriptor(prodScope, javaPsiFacede, XmlElementFactory.getInstance(project));
         this.customBeans.putAll(properties.getCheckedCustomBeansMappingAsBeans(dependencyTagDescriptor));
         this.priorityPaths.addAll(properties.getPriorityPaths());

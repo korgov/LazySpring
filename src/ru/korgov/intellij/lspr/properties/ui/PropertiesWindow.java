@@ -12,7 +12,6 @@ import ru.korgov.util.alias.Su;
 import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -27,7 +26,7 @@ public class PropertiesWindow {
     private JCheckBox testScope;
     private JCheckBox librariesScope;
     private JCheckBox excludeBeansCheckbox;
-    private JTextArea excludeBeansTextArea;
+    private JEditorPane excludeBeansTextArea;
     private JRadioButton conflictsAutoOneRadBut;
     private JRadioButton conflictsAutoAllRadBut;
     private JRadioButton conflictsManualSelectRadBut;
@@ -35,7 +34,7 @@ public class PropertiesWindow {
     private JEditorPane customBeansMappingPane;
     private JCheckBox customBeansMappingCheckbox;
     private JCheckBox onlyVCSFilesCheckbox;
-    private JTextArea priorityFilePathsTextArea;
+    private JEditorPane priorityFilePathsTextArea;
 
     public JPanel getMainPanel() {
         return mainPanel;
@@ -69,10 +68,10 @@ public class PropertiesWindow {
             excludeBeansTextArea.setText(Su.join(properties.getExcludeBeans(), "\n"));
             priorityFilePathsTextArea.setText(Su.join(properties.getPriorityPaths(), "\n"));
             selectConflictPolicity(properties);
-            customBeansMappingCheckbox.setSelected(properties.getCustomBeansMappingStatus());
-            excludeBeansCheckbox.setSelected(properties.getExcludeBeansStatus());
-            onlyVCSFilesCheckbox.setSelected(properties.getOnlyVcsFilesStatus());
-            customBeansMappingPane.setText(properties.getCustomBeansMappingAsText());
+            customBeansMappingCheckbox.setSelected(properties.isCustomBeansMappingUsed());
+            excludeBeansCheckbox.setSelected(properties.isExcludeBeansUsed());
+            onlyVCSFilesCheckbox.setSelected(properties.isOnlyVcsFiles());
+            customBeansMappingPane.setText(properties.getCustomBeansMapping());
         }
     }
 
@@ -99,16 +98,16 @@ public class PropertiesWindow {
     }
 
     public void saveCurrentSettings(final XProperties service) {
-        service.setHeader(beansHeaderPane.getText());
-        service.setFooter(beansFooterPane.getText());
+        service.setBeansHeader(beansHeaderPane.getText());
+        service.setBeansFooter(beansFooterPane.getText());
         service.setExcludeBeans(Cf.list(excludeBeansTextArea.getText().split("\\s")));
         service.setPriorityPaths(Cf.list(priorityFilePathsTextArea.getText().split("\\s")));
         service.setSearchScope(getSelectedScopes());
         setConflictsPolicityIfExists(service);
-        service.setCustomBeansMappingStatus(customBeansMappingCheckbox.isSelected());
-        service.setExcludeBeansStatus(excludeBeansCheckbox.isSelected());
-        service.setOnlyVcsFilesStatus(onlyVCSFilesCheckbox.isSelected());
-        service.setCustomBeansMappingFromText(customBeansMappingPane.getText());
+        service.setCustomBeansMappingUsed(customBeansMappingCheckbox.isSelected());
+        service.setExcludeBeansUsed(excludeBeansCheckbox.isSelected());
+        service.setOnlyVcsFiles(onlyVCSFilesCheckbox.isSelected());
+        service.setCustomBeansMapping(customBeansMappingPane.getText());
     }
 
     private void setConflictsPolicityIfExists(final XProperties service) {
@@ -134,8 +133,8 @@ public class PropertiesWindow {
         return null;
     }
 
-    private List<SearchScopeEnum> getSelectedScopes() {
-        final List<SearchScopeEnum> out = Cf.newList();
+    private Set<SearchScopeEnum> getSelectedScopes() {
+        final Set<SearchScopeEnum> out = Cf.newSet();
         if (productionScope.isSelected()) {
             out.add(SearchScopeEnum.PRODUCTION);
         }

@@ -21,8 +21,8 @@ import com.intellij.psi.xml.XmlTag;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import ru.korgov.intellij.lspr.impl.BeansFinder;
-import ru.korgov.intellij.lspr.LazySpringProjectComponent;
 import ru.korgov.intellij.lspr.impl.DependencyTag;
+import ru.korgov.intellij.lspr.properties.PersistentStateProperties;
 import ru.korgov.intellij.lspr.properties.api.ConflictsPolicity;
 import ru.korgov.intellij.lspr.properties.api.XProperties;
 import ru.korgov.intellij.util.IdeaUtils;
@@ -40,7 +40,7 @@ import java.util.Set;
  * Author: Kirill Korgov (kirill@korgov.ru)
  * Date: 30.11.12
  */
-public class GenTestSpringConfigAction extends AnAction {
+public class GenenerateConfigAction extends AnAction {
 
     private static final String TAB = "    ";
 
@@ -48,8 +48,7 @@ public class GenTestSpringConfigAction extends AnAction {
     public void actionPerformed(final AnActionEvent e) {
         final Project project = e.getData(PlatformDataKeys.PROJECT);
         final Editor editor = e.getData(PlatformDataKeys.EDITOR);
-        final XProperties XPropertiesService = LazySpringProjectComponent.getInstance(project).getState();
-//        final XProperties XPropertiesService = SimpleProperties.getInstance(PropertiesComponent.getInstance(project), project);
+        final XProperties properties = PersistentStateProperties.getInstance(project);
         if (project != null && editor != null) {
             new Task.Backgroundable(project, "Resolving dependencies..", true) {
                 @Override
@@ -59,12 +58,12 @@ public class GenTestSpringConfigAction extends AnAction {
                     final PsiClass clazz = getCurrentClass(editor);
 
                     indicator.setFraction(0.2);
-                    final BeansFinder beansFinder = getBeansFinder(indicator, project, XPropertiesService);
+                    final BeansFinder beansFinder = getBeansFinder(indicator, project, properties);
                     indicator.setFraction(0.4);
                     final Map<String, Set<DependencyTag>> requiredBeans = findForClass(clazz, beansFinder);
                     indicator.setFraction(0.8);
                     indicator.setText("Saving config file..");
-                    createConfig(project, clazz, requiredBeans, XPropertiesService);
+                    createConfig(project, clazz, requiredBeans, properties);
                     indicator.setFraction(1.0);
                 }
             }.setCancelText("Cancel task.").queue();

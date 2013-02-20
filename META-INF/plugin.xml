@@ -16,18 +16,17 @@
     </project-components>
 
     <actions>
-
         <group id="LazySpring" text="Lazy Spring" description="Helper for configuring you test" popup="false">
             <add-to-group group-id="ToolsMenu" anchor="last"/>
-                <action id="LazySpring.GenTestSpringConfigAction" class="ru.korgov.intellij.lspr.actions.GenTestSpringConfigAction"
+                <action id="LazySpring.GenenerateConfigAction" class="ru.korgov.intellij.lspr.actions.GenenerateConfigAction"
                         text="Generate context config"
                         description="Generates xml file with all beans needed for current class.">
                     <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt shift L"/>
                 </action>
             </group>
-
     </actions>
 
     <extensions defaultExtensionNs="com.intellij">
+        <projectService serviceImplementation="ru.korgov.intellij.lspr.properties.PersistentStateProperties"/>
     </extensions>
 </idea-plugin>

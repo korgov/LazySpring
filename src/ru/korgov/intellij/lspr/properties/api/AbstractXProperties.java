@@ -24,7 +24,7 @@ public abstract class AbstractXProperties implements XProperties {
 
     @Override
     public List<String> getCheckedExcludeBeans() {
-        if (getExcludeBeansStatus()) {
+        if (isExcludeBeansUsed()) {
             return getExcludeBeans();
         }
         return Collections.emptyList();
@@ -32,12 +32,12 @@ public abstract class AbstractXProperties implements XProperties {
 
     @Override
     public Map<String, DependencyTag> getCustomBeansMappingAsBeans(final DependencyTagDescriptor dependencyTagDescriptor) {
-        return convertMappingToBeans(getCustomBeansMappingAsText(), dependencyTagDescriptor);
+        return convertMappingToBeans(getCustomBeansMapping(), dependencyTagDescriptor);
     }
 
     @Override
     public Map<String, DependencyTag> getCheckedCustomBeansMappingAsBeans(final DependencyTagDescriptor dependencyTagDescriptor) {
-        if (getCustomBeansMappingStatus()) {
+        if (isCustomBeansMappingUsed()) {
             return getCustomBeansMappingAsBeans(dependencyTagDescriptor);
         }
         return Collections.emptyMap();
@@ -83,4 +83,5 @@ public abstract class AbstractXProperties implements XProperties {
             }
         });
     }
+
 }

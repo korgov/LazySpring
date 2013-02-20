@@ -3,7 +3,6 @@ package ru.korgov.intellij.lspr.properties.api;
 import ru.korgov.intellij.lspr.impl.DependencyTag;
 import ru.korgov.intellij.lspr.impl.DependencyTagDescriptor;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -28,19 +27,19 @@ public interface XProperties {
 
     String getBeansFooter();
 
-    void setExcludeBeansStatus(boolean status);
+    void setExcludeBeansUsed(boolean status);
 
-    boolean getExcludeBeansStatus();
+    boolean isExcludeBeansUsed();
 
-    void setCustomBeansMappingStatus(boolean status);
+    void setCustomBeansMappingUsed(boolean status);
 
-    void setOnlyVcsFilesStatus(boolean status);
+    void setOnlyVcsFiles(boolean status);
 
-    boolean getCustomBeansMappingStatus();
+    boolean isCustomBeansMappingUsed();
 
-    void setCustomBeansMappingFromText(String xmlBeans);
+    void setCustomBeansMapping(String xmlBeans);
 
-    String getCustomBeansMappingAsText();
+    String getCustomBeansMapping();
 
     Map<String, DependencyTag> getCustomBeansMappingAsBeans(DependencyTagDescriptor dependencyTagDescriptor);
 
@@ -48,13 +47,13 @@ public interface XProperties {
 
     void setConflictsPolicity(ConflictsPolicity policity);
 
-    void setHeader(String header);
+    void setBeansHeader(String header);
 
-    void setFooter(String footer);
+    void setBeansFooter(String footer);
 
-    void setSearchScope(Collection<SearchScopeEnum> scopes);
+    void setSearchScope(Set<SearchScopeEnum> scopes);
 
-    boolean getOnlyVcsFilesStatus();
+    boolean isOnlyVcsFiles();
 
     String getSavePathSuffix();
 

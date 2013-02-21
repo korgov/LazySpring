@@ -5,10 +5,12 @@ import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiClassType;
 import com.intellij.psi.PsiElementFactory;
 import com.intellij.psi.PsiType;
+import com.intellij.psi.XmlElementFactory;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.psi.xml.XmlFile;
 import com.intellij.psi.xml.XmlTag;
-import com.intellij.psi.XmlElementFactory;
+import org.jetbrains.annotations.NotNull;
+import ru.korgov.util.ObjectUtils;
 import ru.korgov.util.alias.Cf;
 import ru.korgov.util.alias.Cu;
 import ru.korgov.util.alias.Su;
@@ -26,9 +28,14 @@ public class DependencyTagDescriptor {
     private static final Set<String> BEAN_ID_ATTRS = Cf.set("name", "id");
     private static final Set<String> ALIAS_ID_ATTRS = Cf.set("alias");
 
+    private static final Map<String, Set<String>> IDENTIFIERS = Cu.zipMap(
+            Cf.pair("bean", BEAN_ID_ATTRS),
+            Cf.pair("alias", ALIAS_ID_ATTRS)
+    );
+
     private final GlobalSearchScope prodScope;
     private final JavaPsiFacade javaPsiFacade;
-    private XmlElementFactory xmlElementFactory;
+    private final XmlElementFactory xmlElementFactory;
     private final PsiElementFactory elementFactory;
 
     private final Map<String, DependencyTagBuilder> builders = Cu.zipMap(
@@ -136,6 +143,18 @@ public class DependencyTagDescriptor {
             }
         }
         return false;
+    }
+
+    @NotNull
+    public Option<String> getSomeIdentifier(final XmlTag xmlTag) {
+        final String tagName = xmlTag.getName();
+        for (final String idAttr : ObjectUtils.avoidNull(IDENTIFIERS.get(tagName), BEAN_ID_ATTRS)) {
+            final String idOrNull = xmlTag.getAttributeValue(idAttr);
+            if (idOrNull != null) {
+                return Option.just(idOrNull);
+            }
+        }
+        return Option.nothing();
     }
 
     private interface DependencyTagBuilder {

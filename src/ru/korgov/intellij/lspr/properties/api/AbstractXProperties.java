@@ -48,23 +48,21 @@ public abstract class AbstractXProperties implements XProperties {
         if (!Su.isEmpty(trimmed)) {
             try {
                 final XmlTag rootTag = createTagFromText(trimmed, dependencyTagDescriptor.getXmlElementFactory());
-                return Cu.mapFromIterable(TAG_TO_ID_OR_NAME, toDependencyTagFu(dependencyTagDescriptor), Cf.list(rootTag.findSubTags("bean")));
+                return Cu.mapFromIterable(tagToIdFu(dependencyTagDescriptor), toDependencyTagFu(dependencyTagDescriptor), Cf.list(rootTag.findSubTags("bean")));
             } catch (final Exception ignored) {
             }
         }
         return Collections.emptyMap();
     }
 
-    private static final Fu<XmlTag, String> TAG_TO_ID_OR_NAME = new Fu<XmlTag, String>() {
-        @Override
-        public String apply(final XmlTag tag) {
-            final String beanId = tag.getAttributeValue("id");
-            if (!Su.isEmpty(beanId)) {
-                return beanId;
+    private Function<XmlTag, String> tagToIdFu(final DependencyTagDescriptor dependencyTagDescriptor) {
+        return new Fu<XmlTag, String>() {
+            @Override
+            public String apply(final XmlTag xmlTag) {
+                return dependencyTagDescriptor.getSomeIdentifier(xmlTag).getValue(null);
             }
-            return tag.getAttributeValue("name");
-        }
-    };
+        };
+    }
 
     private Function<XmlTag, DependencyTag> toDependencyTagFu(final DependencyTagDescriptor dependencyTagDescriptor) {
         return new Fu<XmlTag, DependencyTag>() {

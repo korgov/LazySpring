@@ -58,6 +58,8 @@ public class PropertiesWindow {
         customBeansMappingPane.setEditorKit(xmlKit);
         beansFooterPane.setEditorKit(xmlKit);
         beansHeaderPane.setEditorKit(xmlKit);
+        priorityFilePathsTextArea.setEditorKit(xmlKit);
+        excludeBeansTextArea.setEditorKit(xmlKit);
     }
 
     public void loadCurrentProperties(final XProperties properties) {

@@ -1,5 +1,6 @@
 package ru.korgov.util.collection;
 
+import org.jetbrains.annotations.Nullable;
 import ru.korgov.util.alias.Cu;
 
 import java.util.Iterator;
@@ -18,6 +19,10 @@ public class Option<T> implements Iterable<T> {
 
     public T getValue() {
         return value;
+    }
+
+    public T getValue(@Nullable final T ifNotValue) {
+        return hasValue ? value : ifNotValue;
     }
 
     private Option(final T value, final boolean hasValue) {
@@ -40,6 +45,10 @@ public class Option<T> implements Iterable<T> {
 
     public static <T> Option<T> nothing() {
         return new Option<T>(null, false);
+    }
+
+    public static <T> Option<T> avoidNull(final T value) {
+        return value == null ? Option.<T>nothing() : just(value);
     }
 
     @Override

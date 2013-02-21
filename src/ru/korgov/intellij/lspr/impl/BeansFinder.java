@@ -18,7 +18,6 @@ import com.intellij.psi.PsiParameter;
 import com.intellij.psi.PsiType;
 import com.intellij.psi.XmlElementFactory;
 import com.intellij.psi.search.GlobalSearchScope;
-import com.intellij.psi.search.ProjectAndLibrariesScope;
 import com.intellij.psi.search.ProjectScopeBuilder;
 import com.intellij.psi.xml.XmlFile;
 import com.intellij.psi.xml.XmlTag;
@@ -64,9 +63,9 @@ public class BeansFinder {
             return Dependency.byNameAndType(v.getName(), v.getType());
         }
     };
-    private final GlobalSearchScope prodScope;
+    private final GlobalSearchScope searchScope;
     private final DependencyTagDescriptor dependencyTagDescriptor;
-    private final GlobalSearchScope xmlScope;
+    private final GlobalSearchScope xmlSearchScope;
     private final JavaPsiFacade javaPsiFacede;
     private final Project project;
     private final Set<String> excludeBeans = Cf.newSet();
@@ -76,36 +75,54 @@ public class BeansFinder {
     private final ProgressIndicator indicator;
     private final Set<String> priorityPaths = Cf.newSet();
 
+    private final Scopes scopes;
+
+    private static class Scopes {
+        GlobalSearchScope productionScope;
+        GlobalSearchScope testScope;
+        GlobalSearchScope librariesScope;
+        GlobalSearchScope allScope;
+    }
+
     private BeansFinder(final Project project, final XProperties properties, final ProgressIndicator indicator) {
         this.indicator = indicator;
         this.project = project;
         fileStatusManager = FileStatusManager.getInstance(project);
         this.javaPsiFacede = JavaPsiFacade.getInstance(project);
-        this.prodScope = getSearchScope(project, properties);
-        this.xmlScope = GlobalSearchScope.getScopeRestrictedByFileTypes(prodScope, XmlFileType.INSTANCE);
+        this.scopes = buildScopes(project);
+        this.searchScope = getSearchScope(properties);
+        this.xmlSearchScope = GlobalSearchScope.getScopeRestrictedByFileTypes(searchScope, XmlFileType.INSTANCE);
         this.excludeBeans.addAll(properties.getCheckedExcludeBeans());
         this.onlyVcsFiles = properties.isOnlyVcsFiles();
-        this.dependencyTagDescriptor = new DependencyTagDescriptor(prodScope, javaPsiFacede, XmlElementFactory.getInstance(project));
+        this.dependencyTagDescriptor = new DependencyTagDescriptor(searchScope, javaPsiFacede, XmlElementFactory.getInstance(project));
         this.customBeans.putAll(properties.getCheckedCustomBeansMappingAsBeans(dependencyTagDescriptor));
         this.priorityPaths.addAll(properties.getPriorityPaths());
     }
 
-    private GlobalSearchScope getSearchScope(final Project prj, final XProperties propsServiceX) {
-        final Set<SearchScopeEnum> searchScopes = propsServiceX.getSearchScope();
+    private Scopes buildScopes(final Project prj) {
         final ProjectScopeBuilder projectScopeBuilder = ProjectScopeBuilder.getInstance(prj);
-        GlobalSearchScope scope = projectScopeBuilder.buildAllScope();
-        scope.uniteWith(new ProjectAndLibrariesScope(prj));
+        final Scopes out = new Scopes();
+        out.allScope = projectScopeBuilder.buildAllScope();
+        out.librariesScope = projectScopeBuilder.buildLibrariesScope();
+        out.productionScope = projectProductionScope(prj);
+        out.testScope = projectTestScope(prj);
+        return out;
+    }
+
+    private GlobalSearchScope getSearchScope(final XProperties propsServiceX) {
+        final Set<SearchScopeEnum> searchScopes = propsServiceX.getSearchScope();
+        GlobalSearchScope scope = scopes.allScope;
 
         if (!searchScopes.contains(SearchScopeEnum.TEST)) {
-            scope = scope.intersectWith(notScope(projectTestScope(prj)));
+            scope = scope.intersectWith(notScope(scopes.testScope));
         }
 
         if (!searchScopes.contains(SearchScopeEnum.PRODUCTION)) {
-            scope = scope.intersectWith(notScope(projectProductionScope(prj)));
+            scope = scope.intersectWith(notScope(scopes.productionScope));
         }
 
         if (!searchScopes.contains(SearchScopeEnum.LIBRARIES)) {
-            scope = scope.intersectWith(notScope(projectScopeBuilder.buildLibrariesScope()));
+            scope = scope.intersectWith(notScope(scopes.librariesScope));
         }
 
         return scope;
@@ -231,8 +248,6 @@ public class BeansFinder {
 
     private Set<DependencyTag> resolveDependency(final Dependency dependency) {
         final List<DependencyTag> out = Cf.newList();
-//        helper.processUsagesInNonJavaFiles(dependency.getName(), getNonJavaRefsProcessor(out, dependency), xmlScope);
-//        helper.processAllFilesWithWordInText(dependency.getName(), xmlScope, getFilesWithWordProcessor(out, dependency), true);
 
         FindInProjectUtil.findUsages(buildFindModel(dependency), null, project, getUsagesProcessor(out, dependency));
 
@@ -248,7 +263,7 @@ public class BeansFinder {
         findModel.setStringToFind(dependency.getName());
         findModel.setCaseSensitive(true);
         findModel.setCustomScope(true);
-        findModel.setCustomScope(xmlScope);
+        findModel.setCustomScope(xmlSearchScope);
         findModel.setMultipleFiles(true);
         findModel.setFileFilter("*.xml");
         return findModel;
@@ -317,11 +332,15 @@ public class BeansFinder {
     }
 
     private boolean isUnderVcsCheck(final VirtualFile virtualFile) {
-        if (onlyVcsFiles) {
+        if (onlyVcsFiles && !isFromLibrary(virtualFile)) {
             final FileStatus status = fileStatusManager.getStatus(virtualFile);
             return !FileStatus.UNKNOWN.equals(status) && !FileStatus.IGNORED.equals(status);
         }
         return true;
+    }
+
+    private boolean isFromLibrary(final VirtualFile virtualFile) {
+        return scopes.librariesScope.contains(virtualFile);
     }
 
     @Nullable

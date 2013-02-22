@@ -18,6 +18,9 @@
     <name>LazySpring</name>
 
     <description><![CDATA[
+    Сontext-config generation for class/test dependencies.<br>
+    Useful for quick dependencies resolution in JUnit-tests with Spring-beans.<br><br>
+
     Detects class dependencies that must be resolved with spring-beans.<br>
     There are fields annotated with @Autowired or class's setters(set-methods)<br>
     Searchs bean definitions through all project *.xml files, that can be assigned to them<br>

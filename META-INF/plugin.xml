@@ -39,8 +39,6 @@
         <li>Searching beans with a check for assign by field-type (not only by name)</li>
         <li>Bean-aliases supported. We can find bean-alias by name and another bean that can be referenced by alias</li>
         <li>Spring-util beans supported: map, set, list</li>
-        <li>Spring-util beans supported: map, set, list</li>
-        <li>Spring-util beans supported: map, set, list</li>
         <li>Some beans can be excludes from search by their name through the plugin-properties</li>
         <li>Some beans can be described for use strongly-their</li>
         <li>Bean's file-path can have priority, that used to resolve conflicts if more then one bean were found</li>

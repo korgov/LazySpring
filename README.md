@@ -40,5 +40,3 @@ Useful for quick dependencies resolution in JUnit-tests with Spring-beans.
     
     Please note: This plugin is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
     either express or implied.
-
-

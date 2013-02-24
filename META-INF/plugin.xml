@@ -42,7 +42,7 @@
         <li>Some beans can be excludes from search by their name through the plugin-properties</li>
         <li>Some beans can be described for use strongly-their</li>
         <li>Bean's file-path can have priority, that used to resolve conflicts if more then one bean were found</li>
-        <li>Can be added custom headers in result-file, e.g. we can exclude some useful beans and add <import> with it file in header</li>
+        <li>Can be added custom headers in result-file, e.g. we can exclude some useful beans and add &lt;import&gt; with it file in header</li>
     </ul>
     <br>Default shortcuts:
     <ul>

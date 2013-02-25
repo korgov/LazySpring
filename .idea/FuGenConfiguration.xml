@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="FuGenConfiguration">
+    <option name="fuFieldTemplate" value="public static final $FuClass$&lt;$ThisType$, $FieldType$&gt; $FuConstName$ = new $FuClass$&lt;$ThisType$, $FieldType$&gt;() {&#10;    @Override&#10;    public $FieldType$ apply(final $ThisType$ arg) {&#10;        return arg.$fieldGetter$();&#10;    }&#10;};" />
+  </component>
+</project>
+

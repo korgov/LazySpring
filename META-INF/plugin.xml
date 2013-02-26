@@ -53,11 +53,15 @@
     <br>Please note: This plugin is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     ]]></description>
 
-    <version>1.1.0</version>
+    <version>1.1.1</version>
     <vendor email="kirill@korgov.ru">Kirill Korgov</vendor>
     <idea-version since-build="107.105"/>
 
     <change-notes><![CDATA[
+    1.1.1<br>
+    <ul>
+        <li>Text-panes changed to intellij-editors in Settings menu</li>
+    </ul>
     1.1.0<br>
     <ul>
         <li>Added support of bean alias</li>

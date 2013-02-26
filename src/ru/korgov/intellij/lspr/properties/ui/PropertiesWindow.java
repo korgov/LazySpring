@@ -111,12 +111,17 @@ public class PropertiesWindow {
     }
 
     private void setTextFafety(final Editor editor, final String text) {
-        final JComponent component = editor.getComponent();
-        final Dimension oldPrefSize = component.getPreferredSize();
-        final int caretOffset = editor.getCaretModel().getOffset();
-        editor.getDocument().setText(text);
-        editor.getCaretModel().moveToOffset(Math.min(caretOffset, text.length()));
-        component.setPreferredSize(oldPrefSize);
+        ApplicationManager.getApplication().runWriteAction(new Runnable() {
+            @Override
+            public void run() {
+                final JComponent component = editor.getComponent();
+                final Dimension oldPrefSize = component.getPreferredSize();
+                final int caretOffset = editor.getCaretModel().getOffset();
+                editor.getDocument().setText(text);
+                editor.getCaretModel().moveToOffset(Math.min(caretOffset, text.length()));
+                component.setPreferredSize(oldPrefSize);
+            }
+        });
     }
 
     public void loadCurrentProperties(final XProperties properties) {

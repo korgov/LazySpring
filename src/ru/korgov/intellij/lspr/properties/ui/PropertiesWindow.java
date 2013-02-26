@@ -1,6 +1,15 @@
 package ru.korgov.intellij.lspr.properties.ui;
 
-import org.apache.batik.util.gui.xmleditor.XMLEditorKit;
+import com.intellij.codeInsight.template.JavaCodeContextType;
+import com.intellij.codeInsight.template.impl.TemplateContext;
+import com.intellij.codeInsight.template.impl.TemplateEditorUtil;
+import com.intellij.ide.highlighter.XmlFileType;
+import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.editor.Document;
+import com.intellij.openapi.editor.Editor;
+import com.intellij.openapi.editor.EditorFactory;
+import com.intellij.openapi.fileTypes.FileType;
+import com.intellij.uiDesigner.core.GridConstraints;
 import org.jetbrains.annotations.Nullable;
 import ru.korgov.intellij.lspr.properties.api.ConflictsPolicity;
 import ru.korgov.intellij.lspr.properties.api.Constants;
@@ -10,6 +19,7 @@ import ru.korgov.util.alias.Cf;
 import ru.korgov.util.alias.Su;
 
 import javax.swing.*;
+import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.Set;
@@ -19,22 +29,37 @@ import java.util.Set;
  * Date: 02.12.12
  */
 public class PropertiesWindow {
-    private JEditorPane beansFooterPane;
-    private JEditorPane beansHeaderPane;
+
+    private static final GridConstraints DEFAULT_CONSTRAINTS = new GridConstraints(0, 0, 1, 1,
+            GridConstraints.ANCHOR_CENTER,
+            GridConstraints.FILL_BOTH,
+            GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW | GridConstraints.SIZEPOLICY_WANT_GROW,
+            GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW | GridConstraints.SIZEPOLICY_WANT_GROW,
+            null, null, null, 0, true);
+
     private JButton setDefaultHeadersButton;
     private JCheckBox productionScope;
     private JCheckBox testScope;
     private JCheckBox librariesScope;
     private JCheckBox excludeBeansCheckbox;
-    private JEditorPane excludeBeansTextArea;
     private JRadioButton conflictsAutoOneRadBut;
     private JRadioButton conflictsAutoAllRadBut;
     private JRadioButton conflictsManualSelectRadBut;
     private JPanel mainPanel;
-    private JEditorPane customBeansMappingPane;
     private JCheckBox customBeansMappingCheckbox;
     private JCheckBox onlyVCSFilesCheckbox;
-    private JEditorPane priorityFilePathsTextArea;
+
+    private JPanel priorityFilePathsEditorPanel;
+    private JPanel beansHeaderEditorPanel;
+    private JPanel beansFooterEditorPanel;
+    private JPanel customBeansMappingEditorPanel;
+    private JPanel excludeBeansEditorPanel;
+
+    private final Editor priorityFilePathsEditor = createEditor(false, false, XmlFileType.INSTANCE);
+    private final Editor beansHeaderEditor = createEditor(false, false, XmlFileType.INSTANCE);
+    private final Editor beansFooterEditor = createEditor(false, false, XmlFileType.INSTANCE);
+    private final Editor customBeansMappingEditor = createEditor(false, false, XmlFileType.INSTANCE);
+    private final Editor excludeBeansEditor = createEditor(false, false, XmlFileType.INSTANCE);
 
     public JPanel getMainPanel() {
         return mainPanel;
@@ -42,38 +67,77 @@ public class PropertiesWindow {
 
     public PropertiesWindow() {
 
-        setFormatters();
+        initEditors();
 
         setDefaultHeadersButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(final ActionEvent e) {
-                beansHeaderPane.setText(Constants.DEFAULT_HEADER);
-                beansFooterPane.setText(Constants.DEFAULT_FOOTER);
+                ApplicationManager.getApplication().runWriteAction(new Runnable() {
+                    @Override
+                    public void run() {
+                        setTextFafety(beansHeaderEditor, Constants.DEFAULT_HEADER);
+                        setTextFafety(beansFooterEditor, Constants.DEFAULT_FOOTER);
+                    }
+                });
             }
         });
     }
 
-    private void setFormatters() {
-        final XMLEditorKit xmlKit = new XMLEditorKit();
-        customBeansMappingPane.setEditorKit(xmlKit);
-        beansFooterPane.setEditorKit(xmlKit);
-        beansHeaderPane.setEditorKit(xmlKit);
-        priorityFilePathsTextArea.setEditorKit(xmlKit);
-        excludeBeansTextArea.setEditorKit(xmlKit);
+    private void initEditors() {
+        priorityFilePathsEditorPanel.add(priorityFilePathsEditor.getComponent(), DEFAULT_CONSTRAINTS);
+        beansHeaderEditorPanel.add(beansHeaderEditor.getComponent(), DEFAULT_CONSTRAINTS);
+        beansFooterEditorPanel.add(beansFooterEditor.getComponent(), DEFAULT_CONSTRAINTS);
+        customBeansMappingEditorPanel.add(customBeansMappingEditor.getComponent(), DEFAULT_CONSTRAINTS);
+        excludeBeansEditorPanel.add(excludeBeansEditor.getComponent(), DEFAULT_CONSTRAINTS);
+    }
+
+    private Editor createEditor(final boolean isViewer, final boolean isTemplate, final FileType fileType) {
+        final EditorFactory editorFactory = EditorFactory.getInstance();
+        final Document document = editorFactory.createDocument("");
+
+        final Editor editor = editorFactory.createEditor(document, null, fileType, isViewer);
+        editor.getSettings().setLineNumbersShown(false);
+        editor.getSettings().setVirtualSpace(false);
+        editor.getSettings().setWhitespacesShown(true);
+        editor.getSettings().setAdditionalLinesCount(0);
+
+        if (isTemplate) {
+            final TemplateContext contextByType = new TemplateContext();
+            contextByType.setEnabled(new JavaCodeContextType.Statement(), true);
+            TemplateEditorUtil.setHighlighter(editor, contextByType);
+        }
+
+        return editor;
+    }
+
+    private void setTextFafety(final Editor editor, final String text) {
+        final int horizontalScrollOffset = editor.getScrollingModel().getHorizontalScrollOffset();
+        final int verticalScrollOffset = editor.getScrollingModel().getVerticalScrollOffset();
+        final JComponent component = editor.getComponent();
+        final Dimension oldPrefSize = component.getPreferredSize();
+        final int caretOffset = editor.getCaretModel().getOffset();
+        editor.getDocument().setText(text);
+        editor.getCaretModel().moveToOffset(caretOffset);
+        component.setPreferredSize(oldPrefSize);
+        editor.getScrollingModel().scrollHorizontally(horizontalScrollOffset);
+        editor.getScrollingModel().scrollVertically(verticalScrollOffset);
     }
 
     public void loadCurrentProperties(final XProperties properties) {
         if (properties != null) {
-            beansHeaderPane.setText(properties.getBeansHeader());
-            beansFooterPane.setText(properties.getBeansFooter());
+            setTextFafety(beansHeaderEditor, properties.getBeansHeader());
+            setTextFafety(beansFooterEditor, properties.getBeansFooter());
+
             selectScopes(properties);
-            excludeBeansTextArea.setText(Su.join(properties.getExcludeBeans(), "\n"));
-            priorityFilePathsTextArea.setText(Su.join(properties.getPriorityPaths(), "\n"));
+            setTextFafety(excludeBeansEditor, Su.join(properties.getExcludeBeans(), "\n"));
+            setTextFafety(priorityFilePathsEditor, Su.join(properties.getPriorityPaths(), "\n"));
+
             selectConflictPolicity(properties);
             customBeansMappingCheckbox.setSelected(properties.isCustomBeansMappingUsed());
             excludeBeansCheckbox.setSelected(properties.isExcludeBeansUsed());
             onlyVCSFilesCheckbox.setSelected(properties.isOnlyVcsFiles());
-            customBeansMappingPane.setText(properties.getCustomBeansMapping());
+            setTextFafety(customBeansMappingEditor, properties.getCustomBeansMapping());
+
         }
     }
 
@@ -100,16 +164,16 @@ public class PropertiesWindow {
     }
 
     public void saveCurrentSettings(final XProperties service) {
-        service.setBeansHeader(beansHeaderPane.getText());
-        service.setBeansFooter(beansFooterPane.getText());
-        service.setExcludeBeans(Cf.list(excludeBeansTextArea.getText().split("\\s")));
-        service.setPriorityPaths(Cf.list(priorityFilePathsTextArea.getText().split("\\s")));
+        service.setBeansHeader(beansHeaderEditor.getDocument().getText());
+        service.setBeansFooter(beansFooterEditor.getDocument().getText());
+        service.setExcludeBeans(Cf.list(excludeBeansEditor.getDocument().getText().split("\\s")));
+        service.setPriorityPaths(Cf.list(priorityFilePathsEditor.getDocument().getText().split("\\s")));
         service.setSearchScope(getSelectedScopes());
         setConflictsPolicityIfExists(service);
         service.setCustomBeansMappingUsed(customBeansMappingCheckbox.isSelected());
         service.setExcludeBeansUsed(excludeBeansCheckbox.isSelected());
         service.setOnlyVcsFiles(onlyVCSFilesCheckbox.isSelected());
-        service.setCustomBeansMapping(customBeansMappingPane.getText());
+        service.setCustomBeansMapping(customBeansMappingEditor.getDocument().getText());
     }
 
     private void setConflictsPolicityIfExists(final XProperties service) {

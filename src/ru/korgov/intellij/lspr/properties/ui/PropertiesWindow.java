@@ -48,6 +48,7 @@ public class PropertiesWindow {
     private JPanel mainPanel;
     private JCheckBox customBeansMappingCheckbox;
     private JCheckBox onlyVCSFilesCheckbox;
+    private JCheckBox onlyModyulScopeCheckBox;
 
     private JPanel priorityFilePathsEditorPanel;
     private JPanel beansHeaderEditorPanel;
@@ -137,6 +138,7 @@ public class PropertiesWindow {
             customBeansMappingCheckbox.setSelected(properties.isCustomBeansMappingUsed());
             excludeBeansCheckbox.setSelected(properties.isExcludeBeansUsed());
             onlyVCSFilesCheckbox.setSelected(properties.isOnlyVcsFiles());
+            onlyModyulScopeCheckBox.setSelected(properties.isOnlyModuleFilesScope());
             setTextFafety(customBeansMappingEditor, properties.getCustomBeansMapping());
 
         }
@@ -174,6 +176,7 @@ public class PropertiesWindow {
         service.setCustomBeansMappingUsed(customBeansMappingCheckbox.isSelected());
         service.setExcludeBeansUsed(excludeBeansCheckbox.isSelected());
         service.setOnlyVcsFiles(onlyVCSFilesCheckbox.isSelected());
+        service.setOnlyModuleFilesScope(onlyModyulScopeCheckBox.isSelected());
         service.setCustomBeansMapping(customBeansMappingEditor.getDocument().getText());
     }
 

@@ -55,6 +55,10 @@ public interface XProperties {
 
     boolean isOnlyVcsFiles();
 
+    boolean isOnlyModuleFilesScope();
+
+    void setOnlyModuleFilesScope(boolean onlyModuleFilesScope);
+
     String getSavePathSuffix();
 
     void setSavePathSuffix(String suffix);

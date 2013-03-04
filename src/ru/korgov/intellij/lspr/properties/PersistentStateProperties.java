@@ -45,6 +45,7 @@ public class PersistentStateProperties extends AbstractXProperties implements Pe
     private String customBeansMapping = "";
     private boolean customBeansMappingUsed = true;
     private boolean onlyVcsFiles = false;
+    private boolean onlyModuleFilesScope = true;
     private String savePathSuffix = Constants.DEFAULT_SAVE_PATH_SUFFIX;
     private List<String> priorityPaths = Cf.newList();
 
@@ -141,6 +142,16 @@ public class PersistentStateProperties extends AbstractXProperties implements Pe
     @Override
     public boolean isOnlyVcsFiles() {
         return onlyVcsFiles;
+    }
+
+    @Override
+    public boolean isOnlyModuleFilesScope() {
+        return onlyModuleFilesScope;
+    }
+
+    @Override
+    public void setOnlyModuleFilesScope(final boolean onlyModuleFilesScope) {
+        this.onlyModuleFilesScope = onlyModuleFilesScope;
     }
 
     @Override

@@ -58,7 +58,7 @@ public class GenenerateConfigAction extends AnAction {
                     final PsiClass clazz = getCurrentClass(editor);
 
                     indicator.setFraction(0.2);
-                    final BeansFinder beansFinder = getBeansFinder(indicator, project, properties);
+                    final BeansFinder beansFinder = getBeansFinder(indicator, project, clazz, properties);
                     indicator.setFraction(0.4);
                     final Map<String, Set<DependencyTag>> requiredBeans = findForClass(clazz, beansFinder);
                     indicator.setFraction(0.8);
@@ -88,11 +88,11 @@ public class GenenerateConfigAction extends AnAction {
         });
     }
 
-    private BeansFinder getBeansFinder(final ProgressIndicator indicator, final Project project, final XProperties XPropertiesService) {
+    private BeansFinder getBeansFinder(final ProgressIndicator indicator, final Project project, final PsiClass initialClass, final XProperties XPropertiesService) {
         return ApplicationManager.getApplication().runReadAction(new Computable<BeansFinder>() {
             @Override
             public BeansFinder compute() {
-                return BeansFinder.getInstance(project, XPropertiesService, indicator);
+                return BeansFinder.getInstance(project, initialClass, XPropertiesService, indicator);
             }
         });
     }

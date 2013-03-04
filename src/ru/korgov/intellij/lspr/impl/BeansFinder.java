@@ -1,8 +1,10 @@
 package ru.korgov.intellij.lspr.impl;
 
+import com.intellij.codeInsight.AnnotationUtil;
 import com.intellij.find.FindModel;
 import com.intellij.find.impl.FindInProjectUtil;
 import com.intellij.ide.highlighter.XmlFileType;
+import com.intellij.openapi.module.Module;
 import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vcs.FileStatus;
@@ -50,8 +52,7 @@ import static com.intellij.psi.search.GlobalSearchScopes.projectTestScope;
 
 public class BeansFinder {
 
-//    todo: check @Required annotation in setters
-//    private static final String AT_REQUIRED = "org.springframework.beans.factory.annotation.Required";
+    private static final String AT_REQUIRED = "org.springframework.beans.factory.annotation.Required";
 
     private static final String AT_AUTOWIRED = "org.springframework.beans.factory.annotation.Autowired";
 
@@ -84,13 +85,13 @@ public class BeansFinder {
         GlobalSearchScope allScope;
     }
 
-    private BeansFinder(final Project project, final XProperties properties, final ProgressIndicator indicator) {
+    private BeansFinder(final Project project, final PsiClass initialClass, final XProperties properties, final ProgressIndicator indicator) {
         this.indicator = indicator;
         this.project = project;
         fileStatusManager = FileStatusManager.getInstance(project);
         this.javaPsiFacede = JavaPsiFacade.getInstance(project);
         this.scopes = buildScopes(project);
-        this.searchScope = getSearchScope(properties);
+        this.searchScope = getSearchScope(initialClass, properties);
         this.xmlSearchScope = GlobalSearchScope.getScopeRestrictedByFileTypes(searchScope, XmlFileType.INSTANCE);
         this.excludeBeans.addAll(properties.getCheckedExcludeBeans());
         this.onlyVcsFiles = properties.isOnlyVcsFiles();
@@ -109,7 +110,7 @@ public class BeansFinder {
         return out;
     }
 
-    private GlobalSearchScope getSearchScope(final XProperties propsServiceX) {
+    private GlobalSearchScope getSearchScope(final PsiClass initialClass, final XProperties propsServiceX) {
         final Set<SearchScopeEnum> searchScopes = propsServiceX.getSearchScope();
         GlobalSearchScope scope = scopes.allScope;
 
@@ -125,11 +126,19 @@ public class BeansFinder {
             scope = scope.intersectWith(notScope(scopes.librariesScope));
         }
 
+        if (propsServiceX.isOnlyModuleFilesScope()) {
+            final Option<Module> classModule = IdeaUtils.getClassModule(project, initialClass);
+            if (classModule.hasValue()) {
+                final Module module = classModule.getValue();
+                scope = scope.intersectWith(module.getModuleWithDependenciesAndLibrariesScope(true));
+            }
+        }
+
         return scope;
     }
 
-    public static BeansFinder getInstance(final Project project, final XProperties XPropertiesService, final ProgressIndicator indicator) {
-        return new BeansFinder(project, XPropertiesService, indicator);
+    public static BeansFinder getInstance(final Project project, final PsiClass initialClass, final XProperties XPropertiesService, final ProgressIndicator indicator) {
+        return new BeansFinder(project, initialClass, XPropertiesService, indicator);
     }
 
     public Map<String, Set<DependencyTag>> resolveDependencies(final List<Dependency> dependencies) {
@@ -176,19 +185,25 @@ public class BeansFinder {
         final List<Dependency> out = Cf.newList();
         for (final PsiMethod method : methods) {
             final String methodName = method.getName();
-            if (methodName.startsWith("set")) {
-                final PsiParameter[] parameters = method.getParameterList().getParameters();
-                if (parameters.length == 1) {
-                    final PsiType type = parameters[0].getType();
-                    final String beanName = beanNameFromSetter(methodName);
-                    if (beanName != null) {
-                        out.add(Dependency.byNameAndType(beanName, type));
+            if (methodName.startsWith(SETTER_PREFIX)) {
+                if (hasAnnotation(method, AT_REQUIRED)) {
+                    final PsiParameter[] parameters = method.getParameterList().getParameters();
+                    if (parameters.length == 1) {
+                        final PsiType type = parameters[0].getType();
+                        final String beanName = beanNameFromSetter(methodName);
+                        if (beanName != null) {
+                            out.add(Dependency.byNameAndType(beanName, type));
+                        }
                     }
                 }
             }
         }
         //System.out.println("Setters: " + out);
         return out;
+    }
+
+    private boolean hasAnnotation(final PsiMethod method, final String annotationName) {
+        return null != AnnotationUtil.findAnnotation(method, Cf.list(annotationName));
     }
 
     @Nullable

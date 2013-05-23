@@ -18,11 +18,19 @@ import ru.korgov.intellij.lspr.properties.api.XProperties;
 import ru.korgov.util.alias.Cf;
 import ru.korgov.util.alias.Su;
 
-import javax.swing.*;
-import java.awt.*;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JComponent;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.HierarchyEvent;
+import java.awt.event.HierarchyListener;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Author: Kirill Korgov (kirill@korgov.ru)
@@ -62,6 +70,8 @@ public class PropertiesWindow {
     private final Editor customBeansMappingEditor = createEditor(false, false, XmlFileType.INSTANCE);
     private final Editor excludeBeansEditor = createEditor(false, false, XmlFileType.INSTANCE);
 
+    private final ConcurrentHashMap<Editor, String> cachedEdText = Cf.newConcurrentHashMap();
+
     public JPanel getMainPanel() {
         return mainPanel;
     }
@@ -82,6 +92,22 @@ public class PropertiesWindow {
                 });
             }
         });
+
+        mainPanel.addHierarchyListener(new HierarchyListener() {
+            @Override
+            public void hierarchyChanged(final HierarchyEvent e) {
+//                System.out.println("shown");
+                for (final Map.Entry<Editor, String> entry : cachedEdText.entrySet()) {
+                    final Editor editor = entry.getKey();
+                    final String cachedText = cachedEdText.remove(editor);
+                    if (cachedText != null && !editor.getDocument().getText().equals(cachedText)) {
+//                        System.out.println("get-cached");
+                        setTextFafety(editor, cachedText);
+                    }
+                }
+            }
+        });
+
     }
 
     private void initEditors() {
@@ -112,17 +138,22 @@ public class PropertiesWindow {
     }
 
     private void setTextFafety(final Editor editor, final String text) {
-        ApplicationManager.getApplication().runWriteAction(new Runnable() {
-            @Override
-            public void run() {
-                final JComponent component = editor.getComponent();
-                final Dimension oldPrefSize = component.getPreferredSize();
-                final int caretOffset = editor.getCaretModel().getOffset();
-                editor.getDocument().setText(text);
-                editor.getCaretModel().moveToOffset(Math.min(caretOffset, text.length()));
-                component.setPreferredSize(oldPrefSize);
-            }
-        });
+        if (mainPanel.isDisplayable()) {
+            ApplicationManager.getApplication().runWriteAction(new Runnable() {
+                @Override
+                public void run() {
+                    final JComponent component = editor.getComponent();
+                    final Dimension oldPrefSize = component.getPreferredSize();
+                    final int caretOffset = editor.getCaretModel().getOffset();
+                    editor.getDocument().setText(text);
+                    editor.getCaretModel().moveToOffset(Math.min(caretOffset, text.length()));
+                    component.setPreferredSize(oldPrefSize);
+                }
+            });
+        } else {
+            cachedEdText.put(editor, text);
+//            System.out.println("set-cached");
+        }
     }
 
     public void loadCurrentProperties(final XProperties properties) {

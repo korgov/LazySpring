@@ -5,7 +5,6 @@ import com.intellij.openapi.components.ProjectComponent;
 import com.intellij.openapi.options.Configurable;
 import com.intellij.openapi.options.ConfigurationException;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.util.IconLoader;
 import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -13,7 +12,7 @@ import ru.korgov.intellij.lspr.properties.PersistentStateProperties;
 import ru.korgov.intellij.lspr.properties.api.XProperties;
 import ru.korgov.intellij.lspr.properties.ui.PropertiesWindow;
 
-import javax.swing.*;
+import javax.swing.JComponent;
 
 /**
  * Author: Kirill Korgov (kirill@korgov.ru))
@@ -22,7 +21,6 @@ import javax.swing.*;
 
 public class LazySpringProjectComponent implements Configurable, ProjectComponent {
 
-    private Icon icon;
     private PropertiesWindow propertiesWindow;
     private final XProperties properties;
 
@@ -36,14 +34,6 @@ public class LazySpringProjectComponent implements Configurable, ProjectComponen
         return "LazySpring";
     }
 
-    @Override
-    public Icon getIcon() {
-        if (icon == null) {
-            icon = IconLoader.getIcon("/ru/korgov/intellij/lazy.png");
-        }
-        return icon;
-    }
-
     @Nullable
     @Override
     public String getHelpTopic() {
@@ -55,7 +45,7 @@ public class LazySpringProjectComponent implements Configurable, ProjectComponen
         if (propertiesWindow == null) {
             propertiesWindow = new PropertiesWindow();
         }
-        reset();
+//        reset();
         return propertiesWindow.getMainPanel();
     }
 

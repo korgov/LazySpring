@@ -264,7 +264,7 @@ public class BeansFinder {
     private Set<DependencyTag> resolveDependency(final Dependency dependency) {
         final List<DependencyTag> out = Cf.newList();
 
-        FindInProjectUtil.findUsages(buildFindModel(dependency), null, project, getUsagesProcessor(out, dependency));
+        FindInProjectUtil.findUsages(buildFindModel(dependency), null, project, false, getUsagesProcessor(out, dependency));
 
         final Option<DependencyTag> tagWithPriority = getFirstTagWithPriority(out);
         if (tagWithPriority.hasValue()) {

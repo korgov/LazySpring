@@ -24,8 +24,6 @@ Useful for quick dependencies resolution in JUnit-tests with Spring-beans.
         * Bean-aliases supported. We can find bean-alias by name and another bean 
           that can be referenced by alias
         * Spring-util beans supported: map, set, list
-        * Spring-util beans supported: map, set, list
-        * Spring-util beans supported: map, set, list
         * Some beans can be excludes from search by their name through the plugin-properties
         * Some beans can be described for use strongly-their
         * Bean's file-path can have priority, that used to resolve conflicts if more then one bean were found

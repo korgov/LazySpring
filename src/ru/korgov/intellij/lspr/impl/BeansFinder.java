@@ -384,6 +384,10 @@ public class BeansFinder {
     }
 
     public Map<String, Set<DependencyTag>> findForClass(final PsiClass clazz) {
-        return findForClass(clazz, Cf.<String, Set<DependencyTag>>newMap(), Cf.<String>newSet());
+        return findForClass(clazz, Cf.<String, Set<DependencyTag>>newMap());
+    }
+
+    public Map<String, Set<DependencyTag>> findForClass(final PsiClass clazz, final Map<String, Set<DependencyTag>> alreadyResolved) {
+        return findForClass(clazz, alreadyResolved, Cf.<String>newSet());
     }
 }

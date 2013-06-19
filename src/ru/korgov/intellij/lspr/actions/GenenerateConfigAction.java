@@ -1,5 +1,6 @@
 package ru.korgov.intellij.lspr.actions;
 
+import com.intellij.ide.highlighter.XmlFileType;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.PlatformDataKeys;
@@ -17,9 +18,15 @@ import com.intellij.openapi.util.Computable;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.vfs.VirtualFileWrapper;
 import com.intellij.psi.PsiClass;
+import com.intellij.psi.PsiFile;
+import com.intellij.psi.PsiManager;
+import com.intellij.psi.xml.XmlFile;
 import com.intellij.psi.xml.XmlTag;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import ru.korgov.intellij.lspr.actions.generators.Generator;
+import ru.korgov.intellij.lspr.actions.generators.SingleClassGenerator;
+import ru.korgov.intellij.lspr.actions.generators.XmlConfigRebuilder;
 import ru.korgov.intellij.lspr.impl.BeansFinder;
 import ru.korgov.intellij.lspr.impl.DependencyTag;
 import ru.korgov.intellij.lspr.properties.PersistentStateProperties;
@@ -55,49 +62,77 @@ public class GenenerateConfigAction extends AnAction {
                 public void run(@NotNull final ProgressIndicator indicator) {
                     indicator.setText("Searching beans..");
                     indicator.setFraction(0.0);
-                    final PsiClass clazz = getCurrentClass(editor);
-
-                    indicator.setFraction(0.2);
-                    final BeansFinder beansFinder = getBeansFinder(indicator, project, clazz, properties);
-                    indicator.setFraction(0.4);
-                    final Map<String, Set<DependencyTag>> requiredBeans = findForClass(clazz, beansFinder);
-                    indicator.setFraction(0.8);
-                    indicator.setText("Saving config file..");
-                    createConfig(project, clazz, requiredBeans, properties);
+                    final VirtualFile initialFile = getCurrentFile(editor);
+                    if (initialFile != null) {
+                        indicator.setFraction(0.2);
+                        final BeansFinder beansFinder = getBeansFinder(indicator, project, initialFile, properties);
+                        indicator.setFraction(0.4);
+                        final Generator generator = getGenerator(project, initialFile, editor.getCaretModel().getOffset());
+                        if (generator != null) {
+                            final Map<String, Set<DependencyTag>> requiredBeans = generator.find(beansFinder);
+                            indicator.setFraction(0.8);
+                            indicator.setText("Saving config file..");
+                            createConfig(project, initialFile, generator.getDefaultFilename(), requiredBeans, properties);
+                        }
+                    }
                     indicator.setFraction(1.0);
                 }
             }.setCancelText("Cancel task.").queue();
         }
     }
 
-    private Map<String, Set<DependencyTag>> findForClass(final PsiClass clazz, final BeansFinder beansFinder) {
-        return ApplicationManager.getApplication().runReadAction(new Computable<Map<String, Set<DependencyTag>>>() {
+    @Nullable
+    private Generator getGenerator(final Project project, final @NotNull VirtualFile initialFile, final int offset) {
+        return ApplicationManager.getApplication().runReadAction(new Computable<Generator>() {
             @Override
-            public Map<String, Set<DependencyTag>> compute() {
-                return beansFinder.findForClass(clazz);
+            public Generator compute() {
+                final PsiManager psiManager = PsiManager.getInstance(project);
+                final PsiFile psiFile = psiManager.findFile(initialFile);
+                if (psiFile != null) {
+                    if (isXmlFile(initialFile)) {
+                        final XmlFile xmlFile = (XmlFile) psiFile;
+                        return new XmlConfigRebuilder(xmlFile, project);
+                    } else {
+                        final PsiClass clazz = IdeaUtils.findClassAt(psiFile, offset);
+                        if (clazz != null) {
+                            return new SingleClassGenerator(clazz);
+                        }
+                    }
+                }
+                return null;
             }
         });
     }
 
-    private PsiClass getCurrentClass(final Editor editor) {
-        return ApplicationManager.getApplication().runReadAction(new Computable<PsiClass>() {
+    private boolean isXmlFile(final VirtualFile initialFile) {
+        return XmlFileType.INSTANCE.equals(initialFile.getFileType())
+                && "xml".equals(initialFile.getExtension());
+    }
+
+    @Nullable
+    private VirtualFile getCurrentFile(final Editor editor) {
+        return ApplicationManager.getApplication().runReadAction(new Computable<VirtualFile>() {
             @Override
-            public PsiClass compute() {
-                return IdeaUtils.getCurrentClass(editor);
+            public VirtualFile compute() {
+                return IdeaUtils.getCurrentFile(editor);
             }
         });
     }
 
-    private BeansFinder getBeansFinder(final ProgressIndicator indicator, final Project project, final PsiClass initialClass, final XProperties XPropertiesService) {
+    private BeansFinder getBeansFinder(final ProgressIndicator indicator, final Project project, final VirtualFile initialFile, final XProperties XPropertiesService) {
         return ApplicationManager.getApplication().runReadAction(new Computable<BeansFinder>() {
             @Override
             public BeansFinder compute() {
-                return BeansFinder.getInstance(project, initialClass, XPropertiesService, indicator);
+                return BeansFinder.getInstance(project, initialFile, XPropertiesService, indicator);
             }
         });
     }
 
-    private void createConfig(final Project project, final PsiClass clazz, final Map<String, Set<DependencyTag>> beanNameToTag, final XProperties XPropertiesService) {
+    private void createConfig(final Project project,
+                              final VirtualFile file,
+                              final String defaultFilename,
+                              final Map<String, Set<DependencyTag>> beanNameToTag,
+                              final XProperties XPropertiesService) {
         final ConflictsPolicity conflictsPolicity = XPropertiesService.getConflictsPolicity();
         final String beansHeader = XPropertiesService.getBeansHeader();
         final String beansFooter = XPropertiesService.getBeansFooter();
@@ -108,7 +143,7 @@ public class GenenerateConfigAction extends AnAction {
         application.invokeLater(new Runnable() {
             @Override
             public void run() {
-                final VirtualFileWrapper save = saveDialog(project, clazz, savePathSuffix);
+                final VirtualFileWrapper save = saveDialog(project, file, savePathSuffix, defaultFilename);
                 if (save != null) {
                     doWrite(save);
                 }
@@ -144,12 +179,12 @@ public class GenenerateConfigAction extends AnAction {
 
     }
 
-    private VirtualFileWrapper saveDialog(final Project project, final PsiClass clazz, final String savePathSuffix) {
+    private VirtualFileWrapper saveDialog(final Project project, final VirtualFile initialFile, final String savePathSuffix, final String defaultFilename) {
         final FileSaverDialog dialog = FileChooserFactory.getInstance().createSaveFileDialog(
                 new FileSaverDescriptor("Save config to", "", "xml"), project);
-        final VirtualFile moduleDir = getClassModuleDir(project, clazz);
+        final VirtualFile moduleDir = getFileModuleDir(project, initialFile);
         final VirtualFile path = ObjectUtils.avoidNull(addPathSuffix(moduleDir, savePathSuffix), moduleDir);
-        return dialog.save(path, "test-" + clazz.getName() + ".xml");
+        return dialog.save(path, defaultFilename);
     }
 
     @Nullable
@@ -170,8 +205,8 @@ public class GenenerateConfigAction extends AnAction {
         return path.startsWith(sep) ? path.substring(sep.length()) : path;
     }
 
-    private VirtualFile getClassModuleDir(final Project project, final PsiClass clazz) {
-        final Option<Module> classModule = IdeaUtils.getClassModule(project, clazz);
+    private VirtualFile getFileModuleDir(final Project project, final VirtualFile file) {
+        final Option<Module> classModule = IdeaUtils.getFileModule(project, file);
         if (classModule.hasValue()) {
             final VirtualFile moduleFile = classModule.getValue().getModuleFile();
             if (moduleFile != null) {
@@ -200,7 +235,22 @@ public class GenenerateConfigAction extends AnAction {
 
     @Override
     public void update(final AnActionEvent e) {
+        //todo: fix for class!
+        e.getPresentation().setEnabled(isActionEnabled(e));
+    }
+
+    private boolean isActionEnabled(final AnActionEvent e) {
         final Editor editor = e.getData(PlatformDataKeys.EDITOR);
-        e.getPresentation().setEnabled(IdeaUtils.getCurrentClass(editor) != null);
+        if (editor != null) {
+            final VirtualFile initialFile = getCurrentFile(editor);
+            if (initialFile != null) {
+                final Project project = editor.getProject();
+                if (project != null) {
+                    final Generator generator = getGenerator(project, initialFile, editor.getCaretModel().getOffset());
+                    return generator != null;
+                }
+            }
+        }
+        return false;
     }
 }

@@ -23,6 +23,7 @@ import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
+import javax.swing.JTextField;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -63,6 +64,7 @@ public class PropertiesWindow {
     private JPanel beansFooterEditorPanel;
     private JPanel customBeansMappingEditorPanel;
     private JPanel excludeBeansEditorPanel;
+    private JTextField savePathSuffixTextField;
 
     private final Editor priorityFilePathsEditor = createEditor(false, false, XmlFileType.INSTANCE);
     private final Editor beansHeaderEditor = createEditor(false, false, XmlFileType.INSTANCE);
@@ -171,7 +173,7 @@ public class PropertiesWindow {
             onlyVCSFilesCheckbox.setSelected(properties.isOnlyVcsFiles());
             onlyModyulScopeCheckBox.setSelected(properties.isOnlyModuleFilesScope());
             setTextFafety(customBeansMappingEditor, properties.getCustomBeansMapping());
-
+            savePathSuffixTextField.setText(properties.getSavePathSuffix());
         }
     }
 
@@ -209,6 +211,7 @@ public class PropertiesWindow {
         service.setOnlyVcsFiles(onlyVCSFilesCheckbox.isSelected());
         service.setOnlyModuleFilesScope(onlyModyulScopeCheckBox.isSelected());
         service.setCustomBeansMapping(customBeansMappingEditor.getDocument().getText());
+        service.setSavePathSuffix(savePathSuffixTextField.getText());
     }
 
     private void setConflictsPolicityIfExists(final XProperties service) {

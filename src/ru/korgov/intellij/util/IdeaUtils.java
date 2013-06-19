@@ -14,7 +14,6 @@ import com.intellij.psi.PsiField;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiJavaFile;
 import com.intellij.psi.PsiManager;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import ru.korgov.util.alias.Cf;
 import ru.korgov.util.collection.Option;
@@ -31,14 +30,27 @@ public class IdeaUtils {
     }
 
     @Nullable
+    public static VirtualFile getCurrentFile(final Editor editor) {
+        if (editor != null) {
+            final Project project = editor.getProject();
+            if (project != null) {
+                final FileDocumentManager fileDocumentManager = FileDocumentManager.getInstance();
+                return fileDocumentManager.getFile(editor.getDocument());
+            }
+        }
+        return null;
+    }
+
+    @Nullable
     public static PsiClass getCurrentClass(final Editor editor) {
         if (editor != null) {
             final Project project = editor.getProject();
             if (project != null) {
-                final PsiManager psiManager = PsiManager.getInstance(project);
-                final FileDocumentManager fileDocumentManager = FileDocumentManager.getInstance();
-                final VirtualFile vFile = fileDocumentManager.getFile(editor.getDocument());
-                return findClassAt(psiManager, vFile, editor.getCaretModel().getOffset());
+                final VirtualFile vFile = getCurrentFile(editor);
+                if (vFile != null) {
+                    final PsiManager psiManager = PsiManager.getInstance(project);
+                    return findClassAt(psiManager, vFile, editor.getCaretModel().getOffset());
+                }
             }
         }
         return null;
@@ -46,16 +58,15 @@ public class IdeaUtils {
 
     public static Option<Module> getClassModule(final Project project, final PsiClass clazz) {
         final VirtualFile classFile = clazz.getContainingFile().getVirtualFile();
-        if (classFile != null) {
-            return getFileModule(project, classFile);
-        }
-        return Option.nothing();
+        return getFileModule(project, classFile);
     }
 
-    public static Option<Module> getFileModule(final Project project, final @NotNull VirtualFile file) {
-        for (final Module module : ModuleManager.getInstance(project).getModules()) {
-            if (module.getModuleScope().contains(file)) {
-                return Option.just(module);
+    public static Option<Module> getFileModule(final Project project, final @Nullable VirtualFile file) {
+        if (file != null) {
+            for (final Module module : ModuleManager.getInstance(project).getModules()) {
+                if (module.getModuleScope().contains(file)) {
+                    return Option.just(module);
+                }
             }
         }
         return Option.nothing();

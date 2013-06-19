@@ -36,7 +36,7 @@ import ru.korgov.util.alias.Fu;
 import ru.korgov.util.alias.Su;
 import ru.korgov.util.collection.Option;
 
-import java.util.Collections;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -78,6 +78,13 @@ public class BeansFinder {
 
     private final Scopes scopes;
 
+    public Map<String, Set<DependencyTag>> findForClasses(final Collection<PsiClass> classesToResolve, final Map<String, Set<DependencyTag>> alreadyResolved) {
+        for (final PsiClass psiClass : classesToResolve) {
+            findForClass(psiClass, alreadyResolved);
+        }
+        return alreadyResolved;
+    }
+
     private static class Scopes {
         GlobalSearchScope productionScope;
         GlobalSearchScope testScope;
@@ -85,13 +92,13 @@ public class BeansFinder {
         GlobalSearchScope allScope;
     }
 
-    private BeansFinder(final Project project, final PsiClass initialClass, final XProperties properties, final ProgressIndicator indicator) {
+    private BeansFinder(final Project project, final VirtualFile initialFile, final XProperties properties, final ProgressIndicator indicator) {
         this.indicator = indicator;
         this.project = project;
         fileStatusManager = FileStatusManager.getInstance(project);
         this.javaPsiFacede = JavaPsiFacade.getInstance(project);
         this.scopes = buildScopes(project);
-        this.searchScope = getSearchScope(initialClass, properties);
+        this.searchScope = getSearchScope(initialFile, properties);
         this.xmlSearchScope = GlobalSearchScope.getScopeRestrictedByFileTypes(searchScope, XmlFileType.INSTANCE);
         this.excludeBeans.addAll(properties.getCheckedExcludeBeans());
         this.onlyVcsFiles = properties.isOnlyVcsFiles();
@@ -110,7 +117,7 @@ public class BeansFinder {
         return out;
     }
 
-    private GlobalSearchScope getSearchScope(final PsiClass initialClass, final XProperties propsServiceX) {
+    private GlobalSearchScope getSearchScope(final VirtualFile initialFile, final XProperties propsServiceX) {
         final Set<SearchScopeEnum> searchScopes = propsServiceX.getSearchScope();
         GlobalSearchScope scope = scopes.allScope;
 
@@ -127,7 +134,7 @@ public class BeansFinder {
         }
 
         if (propsServiceX.isOnlyModuleFilesScope()) {
-            final Option<Module> classModule = IdeaUtils.getClassModule(project, initialClass);
+            final Option<Module> classModule = IdeaUtils.getFileModule(project, initialFile);
             if (classModule.hasValue()) {
                 final Module module = classModule.getValue();
                 scope = scope.intersectWith(module.getModuleWithDependenciesAndLibrariesScope(true));
@@ -137,14 +144,16 @@ public class BeansFinder {
         return scope;
     }
 
-    public static BeansFinder getInstance(final Project project, final PsiClass initialClass, final XProperties XPropertiesService, final ProgressIndicator indicator) {
-        return new BeansFinder(project, initialClass, XPropertiesService, indicator);
+    public static BeansFinder getInstance(final Project project, final VirtualFile initialFile, final XProperties XPropertiesService, final ProgressIndicator indicator) {
+        return new BeansFinder(project, initialFile, XPropertiesService, indicator);
     }
 
-    public Map<String, Set<DependencyTag>> resolveDependencies(final List<Dependency> dependencies) {
+    public Map<String, Set<DependencyTag>> resolveDependencies(final Iterable<Dependency> dependencies, final Map<String, Set<DependencyTag>> alreadyResolved) {
         final Map<String, Set<DependencyTag>> out = Cf.newMap();
         for (final Dependency dependency : dependencies) {
-            collectForDependency(out, dependency);
+            if (!alreadyResolved.containsKey(dependency.getName())) {
+                collectForDependency(out, dependency);
+            }
         }
         return out;
     }
@@ -158,7 +167,7 @@ public class BeansFinder {
         if (!classDependencies.isEmpty()) {
             final List<Dependency> filteredDependencies = filterUnresolvedDependencies(alreadyResolved, classDependencies);
             //System.out.println("filered deps: " + classDependencies);
-            final Map<String, Set<DependencyTag>> depTags = resolveDependencies(filteredDependencies);
+            final Map<String, Set<DependencyTag>> depTags = resolveDependencies(filteredDependencies, alreadyResolved);
             Cu.appendAllToMultiSet(alreadyResolved, depTags);
             final Set<PsiClass> extractedClasses = extractClasses(depTags);
             //System.out.println("extracted classes: " + extractedClasses);
@@ -171,9 +180,8 @@ public class BeansFinder {
                     //System.out.println("class already processed: " + qualifiedName);
                 }
             }
-            return alreadyResolved;
         }
-        return Collections.emptyMap();
+        return alreadyResolved;
     }
 
     private List<Dependency> extractClassDependencies(final PsiClass clazz) {
@@ -340,7 +348,7 @@ public class BeansFinder {
         indicator.setText2(dependencyName + " found in " + xmlFile.getName());
 
         final XmlTag beanTag = getXmlTagAt(xmlFile, startOffset);
-        final Option<DependencyTag> dependencyTag = dependencyTagDescriptor.buildFromTag(beanTag, dependency, xmlFile);
+        final Option<DependencyTag> dependencyTag = dependencyTagDescriptor.buildFromTag(beanTag, Option.just(dependency), xmlFile);
         if (dependencyTag.hasValue()) {
             out.add(dependencyTag.getValue());
         }

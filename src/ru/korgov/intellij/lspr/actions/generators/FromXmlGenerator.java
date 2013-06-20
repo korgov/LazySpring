@@ -15,7 +15,6 @@ import ru.korgov.util.alias.Cf;
 import ru.korgov.util.alias.Cu;
 import ru.korgov.util.collection.Option;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -23,11 +22,11 @@ import java.util.Set;
  * Author: Kirill Korgov (korgov@yandex-team.ru)
  * Date: 19.06.13 5:22
  */
-public class XmlConfigRebuilder extends AbstractGenerator {
+public class FromXmlGenerator extends AbstractGenerator {
     private final XmlFile xmlFile;
-    private Project project;
+    private final Project project;
 
-    public XmlConfigRebuilder(final XmlFile xmlFile, final Project project) {
+    public FromXmlGenerator(final XmlFile xmlFile, final Project project) {
         this.xmlFile = xmlFile;
         this.project = project;
     }
@@ -36,7 +35,7 @@ public class XmlConfigRebuilder extends AbstractGenerator {
     protected Map<String, Set<DependencyTag>> actualFind(final BeansFinder beansFinder) {
         final DependencyTagDescriptor descriptor = getDepsDescriptor(project);
         final Map<String, Set<DependencyTag>> out = buildSrcDepsMap(descriptor, xmlFile);
-        final List<DependencyTag> srcTags = Cu.join(out.values());
+        final Set<DependencyTag> srcTags = Cu.union(out.values());
         final Set<PsiClass> classesToResolve = Cf.newSet(DependencyTag.flatMapToClasses(srcTags));
         final Set<Dependency> refsToResolve = Cf.newSet(DependencyTag.flatMapToRefs(srcTags));
         Cu.appendAllToMultiSet(out, beansFinder.findForClasses(classesToResolve, out));

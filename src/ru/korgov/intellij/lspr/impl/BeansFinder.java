@@ -152,7 +152,7 @@ public class BeansFinder {
         final Map<String, Set<DependencyTag>> out = Cf.newMap();
         for (final Dependency dependency : dependencies) {
             if (!alreadyResolved.containsKey(dependency.getName())) {
-                collectForDependency(out, dependency);
+                collectForDependency(out, dependency, alreadyResolved);
             }
         }
         return out;
@@ -165,9 +165,9 @@ public class BeansFinder {
         final List<Dependency> classDependencies = extractClassDependencies(clazz);
         //System.out.println("deps: " + classDependencies);
         if (!classDependencies.isEmpty()) {
-            final List<Dependency> filteredDependencies = filterUnresolvedDependencies(alreadyResolved, classDependencies);
+//            final List<Dependency> filteredDependencies = filterUnresolvedDependencies(alreadyResolved, classDependencies);
             //System.out.println("filered deps: " + classDependencies);
-            final Map<String, Set<DependencyTag>> depTags = resolveDependencies(filteredDependencies, alreadyResolved);
+            final Map<String, Set<DependencyTag>> depTags = resolveDependencies(classDependencies, alreadyResolved);
             Cu.appendAllToMultiSet(alreadyResolved, depTags);
             final Set<PsiClass> extractedClasses = extractClasses(depTags);
             //System.out.println("extracted classes: " + extractedClasses);
@@ -245,9 +245,9 @@ public class BeansFinder {
         });
     }
 
-    private void collectForDependency(final Map<String, Set<DependencyTag>> out, final Dependency dependency) {
+    private void collectForDependency(final Map<String, Set<DependencyTag>> out, final Dependency dependency, final Map<String, Set<DependencyTag>> alreadyResolved) {
         final String beanId = dependency.getName();
-        if (!out.containsKey(beanId) && !excludeBeans.contains(beanId)) {
+        if (!alreadyResolved.containsKey(beanId) && !out.containsKey(beanId) && !excludeBeans.contains(beanId)) {
             //System.out.println("for bean: " + beanId);
 
             final Set<DependencyTag> foundedForBean = resolveDependencyWithCustom(dependency);
@@ -257,7 +257,7 @@ public class BeansFinder {
             final Set<Dependency> refs = extractRefs(foundedForBean);
             //System.out.println("refs: " + refs);
             for (final Dependency ref : refs) {
-                collectForDependency(out, ref);
+                collectForDependency(out, ref, alreadyResolved);
             }
         }
     }

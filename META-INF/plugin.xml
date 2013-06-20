@@ -61,6 +61,7 @@
     1.3.0<br>
     <ul>
         <li>Regenerate config from xml-file action added</li>
+        <li>Generated config now automatically added to project VCS</li>
         <li>Some fixes</li>
     </ul>
     1.2.1<br>

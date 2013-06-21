@@ -46,7 +46,13 @@
     </ul>
     <br>Default shortcuts:
     <ul>
-        <li>Ctrl+Shift+Alt+L - Generate context-configuration for current class(in editor)</li>
+        <li>
+        Ctrl+Shift+Alt+L
+            <ul>
+                <li>Generate context-configuration for current class(in editor)</li>
+                <li>Add missing dependencies for current context-configuration (xml-file in editor)</li>
+            </ul>
+        </li>
         <li>Tools Menu -&gt; "Generate context config" - Same as above</li>
         <li>Settings Menu (Ctrl+Alt+S) -&gt; LazySpring - Plugin properties</li>
     </ul>

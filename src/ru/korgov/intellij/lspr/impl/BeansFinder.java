@@ -24,6 +24,7 @@ import com.intellij.psi.search.ProjectScopeBuilder;
 import com.intellij.psi.xml.XmlFile;
 import com.intellij.psi.xml.XmlTag;
 import com.intellij.usageView.UsageInfo;
+import com.intellij.usages.FindUsagesProcessPresentation;
 import com.intellij.util.Processor;
 import org.jetbrains.annotations.Nullable;
 import ru.korgov.intellij.lspr.properties.api.SearchScopeEnum;
@@ -272,7 +273,10 @@ public class BeansFinder {
     private Set<DependencyTag> resolveDependency(final Dependency dependency) {
         final List<DependencyTag> out = Cf.newList();
 
-        FindInProjectUtil.findUsages(buildFindModel(dependency), null, project, false, getUsagesProcessor(out, dependency));
+        final FindModel findModel = buildFindModel(dependency);
+        final Processor<UsageInfo> processor = getUsagesProcessor(out, dependency);
+        final FindUsagesProcessPresentation defPresentation = new FindUsagesProcessPresentation();
+        FindInProjectUtil.findUsages(findModel, null, project, false, processor, defPresentation);
 
         final Option<DependencyTag> tagWithPriority = getFirstTagWithPriority(out);
         if (tagWithPriority.hasValue()) {

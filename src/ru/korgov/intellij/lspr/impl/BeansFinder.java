@@ -25,6 +25,7 @@ import com.intellij.psi.xml.XmlFile;
 import com.intellij.psi.xml.XmlTag;
 import com.intellij.usageView.UsageInfo;
 import com.intellij.usages.FindUsagesProcessPresentation;
+import com.intellij.usages.UsageViewPresentation;
 import com.intellij.util.Processor;
 import org.jetbrains.annotations.Nullable;
 import ru.korgov.intellij.lspr.properties.api.SearchScopeEnum;
@@ -134,6 +135,7 @@ public class BeansFinder {
             scope = scope.intersectWith(notScope(scopes.librariesScope));
         }
 
+      //todo: fix it
         if (propsServiceX.isOnlyModuleFilesScope()) {
             final Option<Module> classModule = IdeaUtils.getFileModule(project, initialFile);
             if (classModule.hasValue()) {
@@ -195,7 +197,7 @@ public class BeansFinder {
         for (final PsiMethod method : methods) {
             final String methodName = method.getName();
             if (methodName.startsWith(SETTER_PREFIX)) {
-                if (hasAnnotation(method, AT_REQUIRED)) {
+                if (hasAnnotation(method, AT_REQUIRED) || hasAnnotation(method, AT_AUTOWIRED)) {
                     final PsiParameter[] parameters = method.getParameterList().getParameters();
                     if (parameters.length == 1) {
                         final PsiType type = parameters[0].getType();
@@ -275,8 +277,8 @@ public class BeansFinder {
 
         final FindModel findModel = buildFindModel(dependency);
         final Processor<UsageInfo> processor = getUsagesProcessor(out, dependency);
-        final FindUsagesProcessPresentation defPresentation = new FindUsagesProcessPresentation();
-        FindInProjectUtil.findUsages(findModel, null, project, false, processor, defPresentation);
+        final FindUsagesProcessPresentation defPresentation = new FindUsagesProcessPresentation(new UsageViewPresentation());
+        FindInProjectUtil.findUsages(findModel, null, project, processor, defPresentation);
 
         final Option<DependencyTag> tagWithPriority = getFirstTagWithPriority(out);
         if (tagWithPriority.hasValue()) {
@@ -286,6 +288,7 @@ public class BeansFinder {
     }
 
     private FindModel buildFindModel(final Dependency dependency) {
+//      System.out.println("search with scope: " + xmlSearchScope);
         final FindModel findModel = new FindModel();
         findModel.setStringToFind(dependency.getName());
         findModel.setCaseSensitive(true);
@@ -348,7 +351,7 @@ public class BeansFinder {
 
     private void processReference(final List<DependencyTag> out, final int startOffset, final XmlFile xmlFile, final Dependency dependency) {
         final String dependencyName = dependency.getName();
-        //System.out.println("found word: " + dependencyName + " in file: " + xmlFile.getName());
+//        System.out.println("found word: " + dependencyName + " in file: " + xmlFile.getName());
         indicator.setText2(dependencyName + " found in " + xmlFile.getName());
 
         final XmlTag beanTag = getXmlTagAt(xmlFile, startOffset);

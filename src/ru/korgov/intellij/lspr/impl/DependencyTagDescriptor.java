@@ -76,7 +76,8 @@ public class DependencyTagDescriptor {
             final PsiClassType classValue = elementFactory.createTypeByFQClassName(clazzName);
             return validDependencyClass(classValue, dependency);
         }
-        return !Su.isEmpty(tag.getAttributeValue("parent"));
+        return !Su.isEmpty(tag.getAttributeValue("parent"))
+          || !Su.isEmpty(tag.getAttributeValue("factory-bean"));
     }
 
     private DependencyTagBuilder utilTagBuilder(final String classAttr, final String defaultClass) {
